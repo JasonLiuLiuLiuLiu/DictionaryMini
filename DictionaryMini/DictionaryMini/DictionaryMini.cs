@@ -12,6 +12,18 @@ namespace DictionaryMini
         public bool IsReadOnly { get; }
         public ICollection<TValue> Values { get; }
 
+        private struct Entry
+        {
+            public int hashCode;
+            public int next;
+            public TKey key;
+            public TValue value;
+        }
+
+        public DictionaryMini(int capacity, IEqualityComparer<TKey> comparer)
+        {
+        }
+
         IEnumerator IEnumerable.GetEnumerator()
         {
             return GetEnumerator();
