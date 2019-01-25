@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
@@ -37,7 +38,11 @@ namespace DictionaryMini
                 int prime = primes[i];
                 if (prime >= min) return prime;
             }
-
+            for (int i = (min | 1); i < Int32.MaxValue; i += 2)
+            {
+                if (IsPrime(i))
+                    return i;
+            }
             return min;
         }
     }
