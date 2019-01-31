@@ -5,7 +5,7 @@ using System.Runtime.Serialization;
 
 namespace DictionaryMini
 {
-    public class DictionaryMini<TKey, TValue> : IDictionary<TKey, TValue>
+    public class DictionaryMini<TKey, TValue>
     {
         public ICollection<TKey> Keys { get; }
         public int Count { get; }
@@ -37,32 +37,12 @@ namespace DictionaryMini
             this.comparer = comparer ?? EqualityComparer<TKey>.Default;
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
-        {
-            throw new NotImplementedException();
-        }
-
         public void Add(KeyValuePair<TKey, TValue> item)
         {
             throw new NotImplementedException();
         }
 
         public void Clear()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Contains(KeyValuePair<TKey, TValue> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
             throw new NotImplementedException();
         }
@@ -83,11 +63,6 @@ namespace DictionaryMini
         }
 
         public bool Remove(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetValue(TKey key, out TValue value)
         {
             throw new NotImplementedException();
         }
