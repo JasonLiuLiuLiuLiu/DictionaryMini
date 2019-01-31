@@ -23,7 +23,11 @@ namespace DictionaryMini
 
         private readonly IEqualityComparer<TKey> _comparer;
 
-        public DictionaryMini(int capacity, IEqualityComparer<TKey> comparer)
+        public DictionaryMini() : this(0)
+        {
+        }
+
+        public DictionaryMini(int capacity, IEqualityComparer<TKey> comparer = null)
         {
             if (capacity < 0)
                 throw new ArgumentOutOfRangeException();
