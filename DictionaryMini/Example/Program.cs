@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DictionaryMini;
 
 namespace Example
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             var dicMini = new DictionaryMini<int, string>(5);
             dicMini.Add(1, "liu ZhenYu");
