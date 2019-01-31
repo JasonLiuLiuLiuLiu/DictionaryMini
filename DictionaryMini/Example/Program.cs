@@ -19,10 +19,10 @@ namespace Example
             Console.WriteLine(dicMini[2]);
 
             dicMini.Remove(1);
-            // Console.WriteLine(dicMini[1]);
+            Console.WriteLine(dicMini.ContainsKey(1));
 
             dicMini.Clear();
-            // Console.WriteLine(dicMini[2]);
+            Console.WriteLine(dicMini.ContainsKey(2));
         }
     }
 }
