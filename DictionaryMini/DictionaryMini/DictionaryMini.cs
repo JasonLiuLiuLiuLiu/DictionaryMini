@@ -5,14 +5,19 @@ namespace DictionaryMini
 {
     public class DictionaryMini<TKey, TValue>
     {
+        //哈希中介
         private int[] _buckets;
-
+        
         private Entry[] _entries;
 
+        //当前空余的Entry数量
         private int _freeCount;
+        //当前空余的Entry的索引
         private int _freeList;
+        //当前字典的容量
         private int _count;
 
+        //字典中数据存储的基础单元
         private struct Entry
         {
             public int HashCode;
@@ -21,6 +26,7 @@ namespace DictionaryMini
             public TValue Value;
         }
 
+        //针对TKey类型的对比器
         private readonly IEqualityComparer<TKey> _comparer;
 
         public DictionaryMini() : this(0)
@@ -36,16 +42,19 @@ namespace DictionaryMini
             _comparer = comparer ?? EqualityComparer<TKey>.Default;
         }
 
+        //添加Item
         public void Add(KeyValuePair<TKey, TValue> item)
         {
             Insert(item.Key, item.Value, true);
         }
 
+        //添加Item
         public void Add(TKey key, TValue value)
         {
             Insert(key, value, true);
         }
 
+        //清空所有元素
         public void Clear()
         {
             if (_count > 0)
@@ -58,11 +67,13 @@ namespace DictionaryMini
             }
         }
 
+        //判断是否包含指定key
         public bool ContainsKey(TKey key)
         {
             return FindEntry(key) >= 0;
         }
 
+        //通过key移除指定的item
         public bool Remove(TKey key)
         {
             if (key == null)
