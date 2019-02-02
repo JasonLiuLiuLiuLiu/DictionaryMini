@@ -10,7 +10,29 @@
 
 带着这些疑问,走进DictionoryMini...
 
+首先,开局一张图,后面全靠编,我找到到的维基百科中关于HashTable的图片.
+
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable0.svg?sanitize=true)
+
+
+```java
+public int hashCode() {
+        int h = hash;
+ //hash default value : 0 
+        if (h == 0 && value.length > 0) {
+ //value : char storage
+            char val[] = value;
+
+            for (int i = 0; i < value.length; i++) {
+                h = 31 * h + val[i];
+            }
+            hash = h;
+        }
+        return h;
+    }
+
+```
+
 
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)
 

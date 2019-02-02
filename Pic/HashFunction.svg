@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" height="352px" width="520px">
+<g stroke="#000">
+<path stroke-width="2" d="m322 91.5h31.3-31zm-166 2.5h35.6-36zm-1 88h35.6-36zm166 4h32.3-32zm1 106h33.2-33zm-165 1h35.6-36z"/>
+<g fill="#0ff">
+<rect height="31" width="142" y="79" x="14"/>
+<rect height="78" width="142" y="145" x="14"/>
+<rect height="78" width="142" y="252" x="14"/></g>
+<g fill="#f9c">
+<rect height="31" width="142" y="78" x="370"/>
+<rect height="31" width="142" y="170" x="370"/>
+<rect height="31" width="142" y="276" x="370"/></g>
+<g fill="#ff9">
+<rect height="52.5" width="114" y="66" x="208"/>
+<rect height="52.5" width="114" y="157" x="206"/>
+<rect height="52.5" width="114" y="268" x="207"/>
+</g>
+<path d="m31 193h42.4-42.4zm-2.7 107h54.8-54.8z"/>
+<path d="m354 86.6v10.2l13.6-4.56zm-163 2.47v10.2l14.8-4.56zm0 99.1 14.8-4.56-14.8-6zm163-6.67v10.2l13.6-4.56zm0 115 13.6-4.56-13.6-6zm-163-8.79v10.2l14.8-4.56z"/>
+</g>
+<g style="text-anchor:middle;text-align:center;font-size:19.2px;font-family:sans-serif">
+<text y="101" x="83">Fox</text>
+<text y="166.6" x="84">The red fox</text>
+<text y="190.5" x="84">runs across</text>
+<text y="213" x="84">the ice</text>
+<text y="273" x="84">The red fox</text>
+<text y="296.3" x="84">walks across</text>
+<text y="319.6" x="84">the ice</text>
+<text y="86.6" x="262">Hash</text>
+<text y="108.7" x="262">function</text>
+<text y="178" x="262">Hash</text>
+<text y="200" x="262">function</text>
+<text y="289" x="262">Hash</text>
+<text y="311" x="262">function</text>
+<text y="100" x="440">DFCD3454</text>
+<text y="193" x="440">52ED879E</text>
+<text y="298" x="440">46042841</text>
+<text y="39" x="80" font-weight="bold" font-size="28.8px">Input</text>
+<text y="39" x="425" font-weight="bold" font-size="28.8px">Hash sum</text>
+</g>
+</svg>
