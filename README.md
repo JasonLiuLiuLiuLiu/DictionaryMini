@@ -60,7 +60,7 @@ public int hashCode() {
 
 `阿宇`-----> 身份证(身份证号码,家庭住址)------>我家
 我们就可以把由阿宇找到身份证号码的过程,理解为哈希函数,身份证存储着我的号码的同时,也存储着我家的地址,身份证这个角色在字典中就是 `bucket`,bucket存储着数据的内存地址(索引).
-以下图片是key--->bucket的过程,也就是`阿宇`----->身份证  的过程.
+以下图片是key--->bucket的过程,也就是`阿宇`----->身份证  的过程.  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable0.svg?sanitize=true)  
 
 警察叔叔通过家庭住址找到了我家之后,我家除了住我,还住着我爸,我妈,警察叔叔敲门的时候,是我爸开门,于是问我爸爸,`阿宇`在哪,我爸不知道,于是我爸问我妈,`阿宇`在哪?我妈告诉警察叔叔,在书房呢.
