@@ -66,8 +66,8 @@ public int hashCode() {
 警察叔叔通过家庭住址找到了我家之后,我家除了住我,还住着我爸,我妈,警察叔叔敲门的时候,是我爸开门,于是问我爸爸,`阿宇`在哪,我爸不知道,于是我爸问我妈,`阿宇`在哪?我妈告诉警察叔叔,在书房呢.
 很好,警察叔叔就这样把我给逮住了.
 字典也是这样,同一个bucket可能有多个key对应,即下图中的Johon Smith和Sandra Dee,但是bucket只能记录一个内存地址(索引),也就是警察叔叔通过家庭地址找到我家时,正常来说,只有一个人过来开门,那么,如何找到也在这个家里的我的呢?我爸记录这我妈在厨房,我妈记录着我在书房,就这样,我就被揪出来了,我爸,我妈,我 就是字典中的一个entry.
-![Alt text]
-如果有一天,我妈妈老来得子又生了一个小宝宝,或者我终于找了一个女朋友,家里又有了新成员要加入,怎么办呢?很简单,我再记录我女朋友得位置就好了,或者我妈妈不再记录我的位置,有了小宝宝就把我我这个亲儿子忘了,满眼里都是小宝宝了,记录小宝宝的位置,那么我的只能巴结小宝宝,让小宝宝来记录我的位置了. (https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)  
+![Alt text] (https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)
+如果有一天,我妈妈老来得子又生了一个小宝宝,或者我终于找了一个女朋友,家里又有了新成员要加入,怎么办呢?很简单,我再记录我女朋友得位置就好了,或者我妈妈不再记录我的位置,有了小宝宝就把我我这个亲儿子忘了,满眼里都是小宝宝了,记录小宝宝的位置,那么我的只能巴结小宝宝,让小宝宝来记录我的位置了.
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable2.svg?sanitize=true)  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable3.svg?sanitize=true)  
 
