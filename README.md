@@ -1,15 +1,15 @@
 
 # DictionaryMini
 ## 为什么写这么一篇博客?   
-从一道亲身经历的面试题说起. 
+### 从一道亲身经历的面试题说起. 
 半年前,我参加我现在所在公司的面试,面试官给了一道题,说有一个Y形的链表,知道起始节点,找出交叉节点.   
 ![Y形链表](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/chain.gif)  
 为了便于描述,我把上面的那条线路称为线路1,下面的称为线路2.    
-思路1:  
+###  思路1:  
 先判断线路1的第一个节点的下级节点是否是线路2的第一个节点,如果不是,再判断是不是线路2的第二个,如果也不是,判断是不是第三个节点,一直到最后一个.  
 如果第一轮没找到,再按以上思路处理线路一的第二个节点,第三个,第四个... 找到为止.  
 时间复杂度$n^2$,相信如果我用的是这种方法,可肯定被Pass了.  
-思路2:  
+###  思路2:  
 首先,我遍历线路2的所有节点,把节点的索引作为key,下级节点索引作为value存入字典中.
 然后,遍历线路1中节点,判断字典中是否包含该节点的下级节点索引的key,即`dic.ContainsKey((node.next)`  ,如果包含,那么该下级节点就是交叉节点了.
 时间复杂度是n.  
@@ -66,10 +66,11 @@ public int hashCode() {
 警察叔叔通过家庭住址找到了我家之后,我家除了住我,还住着我爸,我妈,警察叔叔敲门的时候,是我爸开门,于是问我爸爸,`阿宇`在哪,我爸不知道,于是我爸问我妈,`阿宇`在哪?我妈告诉警察叔叔,在书房呢.
 很好,警察叔叔就这样把我给逮住了.
 字典也是这样,同一个bucket可能有多个key对应,即下图中的Johon Smith和Sandra Dee,但是bucket只能记录一个内存地址(索引),也就是警察叔叔通过家庭地址找到我家时,正常来说,只有一个人过来开门,那么,如何找到也在这个家里的我的呢?我爸记录这我妈在厨房,我妈记录着我在书房,就这样,我就被揪出来了,我爸,我妈,我 就是字典中的一个entry.
-![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)
+![Alt text]
+如果有一天,我妈妈老来得子又生了一个小宝宝,或者我终于找了一个女朋友,家里又有了新成员要加入,怎么办呢?很简单,我再记录我女朋友得位置就好了,或者我妈妈不再记录我的位置,有了小宝宝就把我我这个亲儿子忘了,满眼里都是小宝宝了,记录小宝宝的位置,那么我的只能巴结小宝宝,让小宝宝来记录我的位置了. (https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)  
+![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable2.svg?sanitize=true)  
+![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable3.svg?sanitize=true)  
 
-
-![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable2.svg?sanitize=true)
-
-![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable3.svg?sanitize=true)
-
+既然原理明白了,是不是要看看源码,来研究研究代码中字典怎么实现的呢?
+上次在苏州参加苏州微软技术俱乐部成立大会时,有幸参加了`蒋金楠` 老师讲的Asp .net core框架解密,记得他当时说的话让我印象很深刻,他说,学好一门技术的最好的方法,就是模仿它的样子,自己造一个出来!!与是他弄了个Asp .net core mini,所以我效仿蒋老师,弄了个DictionaryMini  
+### DictionaryMini
