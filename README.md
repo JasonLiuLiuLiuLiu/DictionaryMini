@@ -83,10 +83,120 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 我觉得字典有意思的主要在这几个方面:
 1. 字典的初始化.
 2. 添加新元素.
-3. 通过Key取值.
-4. 移除指定元素
+3. 移除指定元素
 
 字典中还有其他功能,但我相信,只要弄明白的这几个方面的工作原理,我们也就恰中肯綮,他么问题也就迎刃而解了.
 
 ### 字典初始化
+
+先贴源码
+``` c#
+        private void Initialize(int capacity)
+        {
+            int size = HashHelpersMini.GetPrime(capacity);
+            _buckets = new int[size];
+            for (int i = 0; i < _buckets.Length; i++)
+            {
+                _buckets[i] = -1;
+            }
+
+            _entries = new Entry[size];
+
+            _freeList = -1;
+        }
+```
+### 添加新元素
+
+```
+private void Insert(TKey key, TValue value, bool add)
+        {
+            if (key == null)
+            {
+                throw new ArgumentNullException();
+            }
+            if (_buckets == null) Initialize(0);
+            var hashCode = _comparer.GetHashCode(key);
+            var targetBucket = hashCode % _buckets.Length;
+
+            for (int i = _buckets[targetBucket]; i > 0; i = _entries[i].Next)
+            {
+                if (_entries[i].HashCode == hashCode && _comparer.Equals(_entries[i].Key, key))
+                {
+                    if (add)
+                    {
+                        throw new Exception("给定关键字已存在!");
+                    }
+
+                    _entries[i].Value = value;
+                    return;
+                }
+            }
+
+            int index;
+            if (_freeCount > 0)
+            {
+                index = _freeList;
+                _freeList = _entries[index].Next;
+                _freeCount--;
+            }
+            else
+            {
+                if (_count == _entries.Length)
+                {
+                    Resize();
+                    targetBucket = hashCode % _buckets.Length;
+                }
+
+                index = _count;
+                _count++;
+            }
+            _entries[index].HashCode = hashCode;
+            _entries[index].Next = _buckets[targetBucket];
+            _entries[index].Key = key;
+            _entries[index].Value = value;
+            _buckets[targetBucket] = index;
+        }
+```
+
+### 移除元素
+
+```
+        //通过key移除指定的item
+        public bool Remove(TKey key)
+        {
+            if (key == null)
+                throw new Exception();
+
+            if (_buckets != null)
+            {
+                int hashCode = _comparer.GetHashCode(key);
+                int bucket = hashCode % _buckets.Length;
+                int last = -1;
+                for (int i = _buckets[bucket]; i >= 0; last = i, i = _entries[i].Next)
+                {
+                    if (_entries[i].HashCode == hashCode && _comparer.Equals(_entries[i].Key, key))
+                    {
+                        if (last < 0)
+                        {
+                            _buckets[bucket] = _entries[i].Next;
+                        }
+                        else
+                        {
+                            _entries[last].Next = _entries[i].Next;
+                        }
+
+                        _entries[i].HashCode = -1;
+                        _entries[i].Next = _freeList;
+                        _entries[i].Key = default(TKey);
+                        _entries[i].Value = default(TValue);
+                        _freeList = i;
+                        _freeCount++;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+```
 
