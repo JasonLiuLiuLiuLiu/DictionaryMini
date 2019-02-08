@@ -193,11 +193,18 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 ### 字典的扩容
 
 ``` c#
+private void Resize()
+        {
+            //获取大于当前size的最小质数
+            Resize(HashHelpersMini.GetPrime(_count), false);
+        }
  private void Resize(int newSize, bool foreNewHashCodes)
         {
             var newBuckets = new int[newSize];
+            //把所有buckets设置-1
             for (int i = 0; i < newBuckets.Length; i++) newBuckets[i] = -1;
             var newEntries = new Entry[newSize];
+            //把旧的的Enties中的数据拷贝到新的Entires数组中.
             Array.Copy(_entries, 0, newEntries, 0, _count);
             if (foreNewHashCodes)
             {
@@ -209,7 +216,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
                     }
                 }
             }
-
+            //重新对新的bucket赋值.
             for (int i = 0; i < _count; i++)
             {
                 if (newEntries[i].HashCode > 0)
