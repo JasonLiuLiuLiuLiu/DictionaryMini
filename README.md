@@ -243,7 +243,9 @@ private void Resize()
 
             if (_buckets != null)
             {
+                //获取该key的HashCode
                 int hashCode = _comparer.GetHashCode(key);
+                //获取bucket的索引
                 int bucket = hashCode % _buckets.Length;
                 int last = -1;
                 for (int i = _buckets[bucket]; i >= 0; last = i, i = _entries[i].Next)
@@ -258,12 +260,14 @@ private void Resize()
                         {
                             _entries[last].Next = _entries[i].Next;
                         }
-
+                        //把要移除的元素置空.
                         _entries[i].HashCode = -1;
                         _entries[i].Next = _freeList;
                         _entries[i].Key = default(TKey);
                         _entries[i].Value = default(TValue);
+                        //把该释放的索引记录在freeList中
                         _freeList = i;
+                        //把空Entry的数量加1
                         _freeCount++;
                         return true;
                     }
@@ -274,12 +278,60 @@ private void Resize()
         }
 ```
 
+我.Net中的Dictionary的源码进行了精简,做了一个DictionaryMini,有兴趣的可以到我的github查看相关代码.
+https://github.com/liuzhenyulive/DictionaryMini
+
 ## 答疑时间
 
 #### 字典为什么能无限地Add呢?
 
+向Dictionary中添加元素时,会有一步进行判断字典是否满了,没有满的,会用Resize对字典进行扩容,所以字典不会向数组那样有固定的容量.
+
 #### 从字典中取Item速度非常快,为什么呢?
+
+Key-->HashCode-->HashCode%Size-->Bucket Index-->Bucket-->Entry Index-->Value  
+整个过程都没有通过遍历来查找数据,一步到下一步的目的性时非常明确的,所以取数据的过程非常快.
 
 #### 初始化字典可以指定字典容量,这是否多余呢?
 
+前面说过,当向字典中插入数据时,如果字典已满,会自动地给字典Resize扩容.
+扩容的标准时大于当前前容量的最小质数作为当前字典的容量,比如,当我们的字典最终存储的元素为15个时,会有这样的一个过程.
+new Dictionary()------------>size:3
+字典中有3个元素---->Resize--->size:7
+字典中有7个元素---->Resize--->size:11
+字典中有11个元素--->Resize--->size:23
+
+可以看到一共进行了次Resize,如果我们预先知道最终字典要存储15个元素,那么我们可以用new Dictionary(15)来创建一个字典.  
+new Dictionary(15)---------->size:23
+
+就不需要进行Resize了,可以想象,每次Resize都是消耗一定的时间资源的,所以我们在创建字典时,如果知道字典的中要存储的字典的元素个数,在创建字典时,就传入capacity.
+
+Tips:  
+即使指定字典容量capacity,后期如果添加的元素超过这个数量,字典也是会自动扩容的.
+
 #### 字典的桶buckets 长度为素数,为什么呢?
+
+https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-number-as-a-mod-in-a-hashing-function/64191#64191
+
+我们假设有这样的一系列keys K={ 0, 1,..., 100 },假设某一个buckets的长度m=12,因为3是12的一个因子,当key时3的倍数时,那么targetBucket将会是3.
+
+``` 
+        Keys {0,12,24,36,...}
+        TargetBucket将会是0.
+        Keys {3,15,27,39,...}
+        TargetBucket将会是3.
+        Keys {6,18,30,42,...} 
+        TargetBucket将会是6.
+        Keys {9,21,33,45,...} 
+        TargetBucket将会是9.
+```
+        //If K is uniformly distributed(i.e., every key in K is equally likely to occur), then the choice of m is not so critical.But, what happens if K is not uniformly distributed? Imagine that the keys that are most likely to occur are the multiples of 3. In this case, all of the buckets that are not multiples of 3 will be empty with high probability (which is really bad in terms of hash table performance).
+
+如果Key的值是均匀分布的(K中的每一个Key中出现的可能性相同),那么Buckets的Length就没有那么重要了,但是如果Key不是均匀分布呢?  
+想象一下,如果Key在3的倍数时出现的可能性特别大,其他的基本不出现,TargetBucket那些不是3的倍数的索引就基本不会存储什么数据了,这样就可能有2/3的Bucket空着了.  
+
+这种情况其实很常见。 例如，有一种场景，您根据对象存储在内存中的位置来跟踪对象。如果你的计算机的字节大小是4，如果你的Buckets的长度时4,那么所有的内存地址都会时4的倍数,也就是说key都是4的倍数,那么所有的数据都会存储在TargetBucket=0(Key%4=0)的bucket中,而剩下的3/4的Buckets都是空的.  
+
+        //Every key in K that shares a common factor with the number of buckets m will be hashed to a bucket that is a multiple of this factor.
+
+        //Therefore, to minimize collisions, it is important to reduce the number of common factors between m and the elements of K. How can this be achieved? By choosing m to be a number that has very few factors: a prime number.

@@ -162,34 +162,39 @@ namespace DictionaryMini
                     {
                         throw new Exception("给定的关键字已存在!");
                     }
-                    //当add为false时,重新赋值并推出.
+                    //当add为false时,重新赋值并退出.
                     _entries[i].Value = value;
                     return;
                 }
             }
-
+            //表示本次存储数据的数据在Entries中的索引
             int index;
+            //当有数据被Remove时,freeCount会加1
             if (_freeCount > 0)
             {
+                //freeList为上一个移除数据的Entries的索引,这样能尽量地让连续的Entries都利用起来.
                 index = _freeList;
                 _freeList = _entries[index].Next;
                 _freeCount--;
             }
             else
             {
+                //当已使用的Entry的数据等于Entries的长度时,说明字典里的数据已经存满了,需要对字典进行扩容,Resize.
                 if (_count == _entries.Length)
                 {
                     Resize();
                     targetBucket = hashCode % _buckets.Length;
                 }
-
+                //默认取未使用的第一个
                 index = _count;
                 _count++;
             }
+            //对Entries进行赋值
             _entries[index].HashCode = hashCode;
             _entries[index].Next = _buckets[targetBucket];
             _entries[index].Key = key;
             _entries[index].Value = value;
+            //用buckets来登记数据在Entries中的索引.
             _buckets[targetBucket] = index;
         }
 
