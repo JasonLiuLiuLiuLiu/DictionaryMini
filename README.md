@@ -54,6 +54,7 @@ public int hashCode() {
 ![哈希函数工作原理图](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/HashFunction.svg?sanitize=true)  
 
 ## 字典
+
 通过上面解释的什么是哈希函数,我们应该可以得出一个这样的结论:  
 `一个对象的哈希值是确定且唯一的,并求出一个对象的哈希值远比在大量数据中遍历寻找我们要的数据来得简单得多.`  
 那么,如何把哈希值和在集合中我们要的数据的地址关联起来呢?
@@ -77,22 +78,35 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 
 既然大的原理明白了,是不是要看看源码,来研究研究代码中字典怎么实现的呢?
 
-# DictionaryMini
+## DictionaryMini
 
 上次在苏州参加苏州微软技术俱乐部成立大会时,有幸参加了`蒋金楠` 老师讲的Asp .net core框架解密,蒋老师有句话让我印象很深刻,"学好一门技术的最好的方法,就是模仿它的样子,自己造一个出来"于是他弄了个Asp .net core mini,所以我效仿蒋老师,弄了个DictionaryMini  
 
 其源代码我放在了Github仓库,有兴趣的可以看看:https://github.com/liuzhenyulive/DictionaryMini
 
 我觉得字典有意思的主要在这几个方面:
-1. 字典的初始化.
-2. 添加新元素.
+
+1. 字典的初始化
+2. 添加新元素
 3. 移除元素
 
 字典中还有其他功能,但我相信,只要弄明白的这几个方面的工作原理,我们也就恰中肯綮,他么问题也就迎刃而解了.  
 
-### 字典初始化
+### 数据存储的最小单元
 
-先贴源码
+``` c#
+   private struct Entry
+        {
+            public int HashCode;
+            public int Next;
+            public TKey Key;
+            public TValue Value;
+        }
+```
+
+一个存储单元包括该key的HashCode,以及下个Entry的索引Next,该键值对的Key以及数据Vaule.
+
+### 字典初始化
 
 ``` c#
         private void Initialize(int capacity)
@@ -109,63 +123,74 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
             _freeList = -1;
         }
 ```
+字典初始化时,首先要创建两个指定长度的int数组,分别作为buckets和entries,其中buckets的index是key的`哈希值%size`,它的value是数据在entries中的index,我们要取得数据就存在entries中.当某一个bucket没有指向任何entry时,它的value为-1.  
+另外,很有意思得一点,的这个指定长度是多少呢?这个我研究了挺久,发现取得是大于capacity的最小质数.
 
 ### 添加新元素
 
-```
-private void Insert(TKey key, TValue value, bool add)
+``` c#
+  private void Insert(TKey key, TValue value, bool add)
         {
             if (key == null)
             {
                 throw new ArgumentNullException();
             }
+            //如果buckets为空,则重新初始化字典.
             if (_buckets == null) Initialize(0);
+            //获取传入key的 哈希值
             var hashCode = _comparer.GetHashCode(key);
+            //把hashCode%size的值作为目标Bucket的Index.
             var targetBucket = hashCode % _buckets.Length;
-
+            //遍历判断传入的key对应的值是否已经添加字典中
             for (int i = _buckets[targetBucket]; i > 0; i = _entries[i].Next)
             {
                 if (_entries[i].HashCode == hashCode && _comparer.Equals(_entries[i].Key, key))
                 {
+                    //当add为true时,直接抛出异常,告诉给定的值已存在在字典中.
                     if (add)
                     {
-                        throw new Exception("给定关键字已存在!");
+                        throw new Exception("给定的关键字已存在!");
                     }
-
+                    //当add为false时,重新赋值并退出.
                     _entries[i].Value = value;
                     return;
                 }
             }
-
+            //表示本次存储数据的数据在Entries中的索引
             int index;
+            //当有数据被Remove时,freeCount会加1
             if (_freeCount > 0)
             {
+                //freeList为上一个移除数据的Entries的索引,这样能尽量地让连续的Entries都利用起来.
                 index = _freeList;
                 _freeList = _entries[index].Next;
                 _freeCount--;
             }
             else
             {
+                //当已使用的Entry的数据等于Entries的长度时,说明字典里的数据已经存满了,需要对字典进行扩容,Resize.
                 if (_count == _entries.Length)
                 {
                     Resize();
                     targetBucket = hashCode % _buckets.Length;
                 }
-
+                //默认取未使用的第一个
                 index = _count;
                 _count++;
             }
+            //对Entries进行赋值
             _entries[index].HashCode = hashCode;
             _entries[index].Next = _buckets[targetBucket];
             _entries[index].Key = key;
             _entries[index].Value = value;
+            //用buckets来登记数据在Entries中的索引.
             _buckets[targetBucket] = index;
         }
 ```
 
 ### 移除元素
 
-```
+``` c#
         //通过key移除指定的item
         public bool Remove(TKey key)
         {

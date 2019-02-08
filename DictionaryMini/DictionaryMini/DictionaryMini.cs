@@ -7,13 +7,15 @@ namespace DictionaryMini
     {
         //哈希中介
         private int[] _buckets;
-        
+
         private Entry[] _entries;
 
         //当前空余的Entry数量
         private int _freeCount;
+
         //当前空余的Entry的索引
         private int _freeList;
+
         //当前字典的容量
         private int _count;
 
@@ -144,19 +146,23 @@ namespace DictionaryMini
             {
                 throw new ArgumentNullException();
             }
+            //如果buckets为空,则重新初始化字典.
             if (_buckets == null) Initialize(0);
+            //获取传入key的 哈希值
             var hashCode = _comparer.GetHashCode(key);
+            //把hashCode%size的值作为目标Bucket的Index.
             var targetBucket = hashCode % _buckets.Length;
-
+            //遍历判断传入的key对应的值是否已经添加字典中
             for (int i = _buckets[targetBucket]; i > 0; i = _entries[i].Next)
             {
                 if (_entries[i].HashCode == hashCode && _comparer.Equals(_entries[i].Key, key))
                 {
+                    //当add为true时,直接抛出异常,告诉给定的值已存在在字典中.
                     if (add)
                     {
-                        throw new Exception("给定关键字已存在!");
+                        throw new Exception("给定的关键字已存在!");
                     }
-
+                    //当add为false时,重新赋值并推出.
                     _entries[i].Value = value;
                     return;
                 }
