@@ -70,7 +70,8 @@ public int hashCode() {
 key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable0.svg?sanitize=true)  
 
-警察叔叔通过家庭住址找到了我家之后,我家除了住我,还住着我爸,我妈,警察叔叔敲门的时候,是我爸开门,于是问我爸爸,`阿宇`在哪,我爸不知道,于是我爸问我妈,`阿宇`在哪?我妈告诉警察叔叔,在书房呢.很好,警察叔叔就这样把我给逮住了.  
+警察叔叔通过家庭住址找到了我家之后,我家除了住我,还住着我爸,我妈,警察叔叔敲门的时候,是我爸开门,于是问我爸爸,`阿宇`在哪,我爸不知道,我爸便问我妈,儿子在哪?我妈告诉警察叔叔,我在书房呢.很好,警察叔叔就这样把我给逮住了.  
+  
 字典也是这样,同一个bucket可能有多个key对应,即下图中的Johon Smith和Sandra Dee,但是bucket只能记录一个内存地址(索引),也就是警察叔叔通过家庭地址找到我家时,正常来说,只有一个人过来开门,那么,如何找到也在这个家里的我的呢?我爸记录这我妈在厨房,我妈记录着我在书房,就这样,我就被揪出来了,我爸,我妈,我 就是字典中的一个entry.  
 
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)  
