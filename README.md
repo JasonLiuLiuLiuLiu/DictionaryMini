@@ -311,11 +311,9 @@ Tips:
 
 #### 字典的桶buckets 长度为素数,为什么呢?
 
-https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-number-as-a-mod-in-a-hashing-function/64191#64191
-
 我们假设有这样的一系列keys K={ 0, 1,..., 100 },假设某一个buckets的长度m=12,因为3是12的一个因子,当key时3的倍数时,那么targetBucket将会是3.
 
-``` 
+``` c#
         Keys {0,12,24,36,...}
         TargetBucket将会是0.
         Keys {3,15,27,39,...}
@@ -325,13 +323,10 @@ https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-numbe
         Keys {9,21,33,45,...} 
         TargetBucket将会是9.
 ```
-        //If K is uniformly distributed(i.e., every key in K is equally likely to occur), then the choice of m is not so critical.But, what happens if K is not uniformly distributed? Imagine that the keys that are most likely to occur are the multiples of 3. In this case, all of the buckets that are not multiples of 3 will be empty with high probability (which is really bad in terms of hash table performance).
 
 如果Key的值是均匀分布的(K中的每一个Key中出现的可能性相同),那么Buckets的Length就没有那么重要了,但是如果Key不是均匀分布呢?  
-想象一下,如果Key在3的倍数时出现的可能性特别大,其他的基本不出现,TargetBucket那些不是3的倍数的索引就基本不会存储什么数据了,这样就可能有2/3的Bucket空着了.  
-
-这种情况其实很常见。 例如，有一种场景，您根据对象存储在内存中的位置来跟踪对象。如果你的计算机的字节大小是4，如果你的Buckets的长度时4,那么所有的内存地址都会时4的倍数,也就是说key都是4的倍数,那么所有的数据都会存储在TargetBucket=0(Key%4=0)的bucket中,而剩下的3/4的Buckets都是空的.  
-
-        //Every key in K that shares a common factor with the number of buckets m will be hashed to a bucket that is a multiple of this factor.
-
-        //Therefore, to minimize collisions, it is important to reduce the number of common factors between m and the elements of K. How can this be achieved? By choosing m to be a number that has very few factors: a prime number.
+想象一下,如果Key在3的倍数时出现的可能性特别大,其他的基本不出现,TargetBucket那些不是3的倍数的索引就基本不会存储什么数据了,这样就可能有2/3的Bucket空着,数据大量第聚集在0,3,6,9中.  
+这种情况其实很常见。 例如，有一种场景，您根据对象存储在内存中的位置来跟踪对象,如果你的计算机的字节大小是4，如果你的Buckets的长度也为4,那么所有的内存地址都会时4的倍数,也就是说key都是4的倍数,导致所有的数据都会存储在TargetBucket=0(Key%4=0)的bucket中,而剩下的3/4的Buckets都是空的. 这样数据分布就非常不均匀了.  
+K中的每一个key如果与Buckets的长度m有公因子,那么该数据就会存储在这个公因子为索引的bucket中.为了让数据尽可能地均匀地分布在Buckets中,我们要尽量减少m和K中的key的有公因子出现的可能.那么,把Bucket的长度设为质数就是最佳选择了.这就是为什么每次利用Resize给字典扩容时会取大于当前size的最小质数的原因.  
+确实,这一块可能有点难以理解,我花了好几天才研究明白,如果小伙伴们没有看懂建议看看这里.
+https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-number-as-a-mod-in-a-hashing-function/64191#64191
