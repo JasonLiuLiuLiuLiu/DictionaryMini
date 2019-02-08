@@ -97,7 +97,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 
 字典中还有其他功能,但我相信,只要弄明白的这几个方面的工作原理,我们也就恰中肯綮,他么问题也就迎刃而解了.  
 
-### 数据存储的最小单元
+### 数据存储的最小单元(Entry)的数据结构
 
 ``` c#
    private struct Entry
@@ -109,7 +109,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
         }
 ```
 
-一个存储单元包括该key的HashCode,以及下个Entry的索引Next,该键值对的Key以及数据Vaule.
+一个Entry包括该key的HashCode,以及下个Entry的索引Next,该键值对的Key以及数据Vaule.
 
 ### 字典初始化
 
@@ -128,8 +128,8 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
             _freeList = -1;
         }
 ```
-字典初始化时,首先要创建两个指定长度的int数组,分别作为buckets和entries,其中buckets的index是key的`哈希值%size`,它的value是数据在entries中的index,我们要取得数据就存在entries中.当某一个bucket没有指向任何entry时,它的value为-1.  
-另外,很有意思得一点,的这个指定长度是多少呢?这个我研究了挺久,发现取得是大于capacity的最小质数.
+字典初始化时,首先要创建int数组,分别作为buckets和entries,其中buckets的index是key的`哈希值%size`,它的value是数据在entries中的index,我们要取的数据就存在entries中.当某一个bucket没有指向任何entry时,它的value为-1.  
+另外,很有意思得一点,buckets的数组长度是多少呢?这个我研究了挺久,发现取的是大于capacity的最小质数.
 
 ### 添加新元素
 
