@@ -86,9 +86,11 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 
 我觉得字典有意思的主要在这几个方面:
 
-1. 字典的初始化
-2. 添加新元素
-3. 移除元素
+1. 数据存储的最小单元
+2. 字典的初始化
+3. 添加新元素
+4. 字典的扩容
+5. 移除元素
 
 字典中还有其他功能,但我相信,只要弄明白的这几个方面的工作原理,我们也就恰中肯綮,他么问题也就迎刃而解了.  
 
@@ -185,6 +187,41 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
             _entries[index].Value = value;
             //用buckets来登记数据在Entries中的索引.
             _buckets[targetBucket] = index;
+        }
+```
+
+### 字典的扩容
+
+``` c#
+ private void Resize(int newSize, bool foreNewHashCodes)
+        {
+            var newBuckets = new int[newSize];
+            for (int i = 0; i < newBuckets.Length; i++) newBuckets[i] = -1;
+            var newEntries = new Entry[newSize];
+            Array.Copy(_entries, 0, newEntries, 0, _count);
+            if (foreNewHashCodes)
+            {
+                for (int i = 0; i < _count; i++)
+                {
+                    if (newEntries[i].HashCode != -1)
+                    {
+                        newEntries[i].HashCode = _comparer.GetHashCode(newEntries[i].Key);
+                    }
+                }
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
+                if (newEntries[i].HashCode > 0)
+                {
+                    int bucket = newEntries[i].HashCode % newSize;
+                    newEntries[i].Next = newBuckets[bucket];
+                    newBuckets[bucket] = i;
+                }
+            }
+
+            _buckets = newBuckets;
+            _entries = newEntries;
         }
 ```
 
