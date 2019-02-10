@@ -56,8 +56,8 @@ public int hashCode() {
 
 可以看到,无论多长的字符串,最终都会返回一个int值,当哈希函数确定的情况下,任何一个字符串的哈希值都是唯一且确定的.  
 当然,这里只是找了一种最简单的字符数哈希值求法,理论上只要能把一个对象转换成唯一且确定值的函数,我们都可以把它称之为哈希函数.  
-这是哈希函数的工作原理图.  
-![哈希函数工作原理图](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/HashFunction.svg?sanitize=true)  
+这是哈希函数的示意图.  
+![哈希函数示意图](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/HashFunction.svg?sanitize=true)  
 所以,`一个对象的哈希值是确定且唯一的!`.  
 
 # 字典
