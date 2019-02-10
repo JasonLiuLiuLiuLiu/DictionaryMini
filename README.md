@@ -94,7 +94,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
 
 上次在苏州参加苏州微软技术俱乐部成立大会时,有幸参加了`蒋金楠` 老师讲的Asp .net core框架解密,蒋老师有句话让我印象很深刻,"学好一门技术的最好的方法,就是模仿它的样子,自己造一个出来"于是他弄了个Asp .net core mini,所以我效仿蒋老师,弄了个DictionaryMini  
 
-其源代码我放在了Github仓库,有兴趣的可以看看:https://github.com/liuzhenyulive/DictionaryMini
+其源代码我放在了Github仓库,有兴趣的可以看看:<https://github.com/liuzhenyulive/DictionaryMini>
 
 我觉得字典这几个方面值得了解一下:
 
@@ -137,6 +137,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
             _freeList = -1;
         }
 ```
+
 字典初始化时,首先要创建int数组,分别作为buckets和entries,其中buckets的index是key的`哈希值%size`,它的value是数据在entries中的index,我们要取的数据就存在entries中.当某一个bucket没有指向任何entry时,它的value为-1.  
 另外,很有意思得一点,buckets的数组长度是多少呢?这个我研究了挺久,发现取的是大于capacity的最小质数.
 
@@ -291,7 +292,7 @@ private void Resize()
 ```
 
 我对.Net中的Dictionary的源码进行了精简,做了一个DictionaryMini,有兴趣的可以到我的github查看相关代码.
-https://github.com/liuzhenyulive/DictionaryMini
+<https://github.com/liuzhenyulive/DictionaryMini>
 
 # 答疑时间
 
@@ -331,9 +332,9 @@ Tips:
         TargetBucket将会是0.
         Keys {3,15,27,39,...}
         TargetBucket将会是3.
-        Keys {6,18,30,42,...} 
+        Keys {6,18,30,42,...}
         TargetBucket将会是6.
-        Keys {9,21,33,45,...} 
+        Keys {9,21,33,45,...}
         TargetBucket将会是9.
 ```
 
@@ -342,7 +343,7 @@ Tips:
 这种情况其实时很常见的。 例如，又一种场景，您根据对象存储在内存中的位置来跟踪对象,如果你的计算机的字节大小是4，而且你的Buckets的长度也为4,那么所有的内存地址都会时4的倍数,也就是说key都是4的倍数,它的HashCode也将会时4的倍数,导致所有的数据都会存储在TargetBucket=0(Key%4=0)的bucket中,而剩下的3/4的Buckets都是空的. 这样数据分布就非常不均匀了.  
 K中的每一个key如果与Buckets的长度m有公因子,那么该数据就会存储在这个公因子的倍数为索引的bucket中.为了让数据尽可能地均匀地分布在Buckets中,我们要尽量减少m和K中的key的有公因子出现的可能性.那么,把Bucket的长度设为质数就是最佳选择了,因为质数的因子时最少的.这就是为什么每次利用Resize给字典扩容时会取大于当前size的最小质数的原因.  
 确实,这一块可能有点难以理解,我花了好几天才研究明白,如果小伙伴们没有看懂建议看看这里.
-https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-number-as-a-mod-in-a-hashing-function/64191#64191
+<https://cs.stackexchange.com/questions/11029/why-is-it-best-to-use-a-prime-number-as-a-mod-in-a-hashing-function/64191#64191>
 
 最后,感谢大家耐着性子把这篇文章看完,欢迎fork DictionaryMini进行进一步的研究,谢谢大家的支持.
-https://github.com/liuzhenyulive/DictionaryMini
+<https://github.com/liuzhenyulive/DictionaryMini>
