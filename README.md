@@ -79,7 +79,7 @@ key--->bucket的过程     ~=     `阿宇`----->身份证  的过程.
   
 字典也是这样,因为key的哈希值范围很大的,我们不可能声明一个这么大的数组作为buckets,这样就太浪费了,我们做法时HashCode%BucketSize作为bucket的索引.  
   
-假设Bucket的长度3,那么当key1的HashCode为2时,它数据地址就问buckets[2]要,当key2的HashCode为5时,它的数据地址也是问buckets[2]要的.  
+假设Bucket的长度3,那么当key1的HashCode为2时,它数据地址就问buckets[2](2%3=2)要,当key2的HashCode为5时,它的数据地址也是问buckets[2](5%3=2)要的.  
   
 这就导致同一个bucket可能有多个key对应,即下图中的Johon Smith和Sandra Dee,但是bucket只能记录一个内存地址(索引),也就是警察叔叔通过家庭地址找到我家时,正常来说,只有一个人过来开门,那么,如何找到也在这个家里的我的呢?我爸记录这我妈在厨房,我妈记录着我在书房,就这样,我就被揪出来了,我爸,我妈,我 就是字典中的一个entry.  
 
