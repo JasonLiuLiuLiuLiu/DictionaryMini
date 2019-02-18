@@ -153,7 +153,7 @@ namespace DictionaryMini
             //把hashCode%size的值作为目标Bucket的Index.
             var targetBucket = hashCode % _buckets.Length;
             //遍历判断传入的key对应的值是否已经添加字典中
-            for (int i = _buckets[targetBucket]; i > 0; i = _entries[i].Next)
+            for (int i = _buckets[targetBucket]; i >= 0; i = _entries[i].Next)
             {
                 if (_entries[i].HashCode == hashCode && _comparer.Equals(_entries[i].Key, key))
                 {
