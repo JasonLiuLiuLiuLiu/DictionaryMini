@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace DictionaryMini
 {
@@ -46,6 +47,10 @@ namespace DictionaryMini
 
         //时否动态扩充锁的数量
         private readonly bool m_growLockArry;
+
+        private int m_keyRehashCount;
+
+        private int m_budget;
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
@@ -113,5 +118,108 @@ namespace DictionaryMini
 
         public ICollection<TKey> Keys { get; }
         public ICollection<TValue> Values { get; }
+
+        #region Private
+
+        private bool TryAddInternal(TKey key, TValue value, bool updateIfExists, bool acquireLock, out TValue resultingValue)
+        {
+            while (true)
+            {
+                int bucketNo, lockNo;
+                int hashcode;
+
+                //https://www.cnblogs.com/blurhkh/p/10357576.html
+                //需要了解一下值传递和引用传递
+                Tables table = m_tables;
+                IEqualityComparer<TKey> comparer = table.m_comparer;
+                hashcode = comparer.GetHashCode(key);
+
+                GetBucketAndLockNo(hashcode, out bucketNo, out lockNo, table.m_buckets.Length, table.m_locks.Length);
+
+                bool resizeDesired = false;
+                bool lockTaken = false;
+
+                try
+                {
+                    if (acquireLock)
+                        Monitor.Enter(table.m_locks[lockNo], ref lockTaken);
+
+                    //如果表刚刚调整了大小，我们可能没有持有正确的锁，必须重试。
+                    //当然这种情况很少见
+                    if (table != m_tables)
+                        continue;
+
+                    Node prev = null;
+                    for (Node node = table.m_buckets[bucketNo]; node != null; node = node.m_next)
+                    {
+                        if (comparer.Equals(node.m_key, key))
+                        {
+                            //key在字典里找到了。如果允许更新，则更新该key的值。
+                            //我们需要为更新创建一个node，以支持不能以原子方式写入的TValue类型，因为free-lock 读取可能同时发生。
+                            if (updateIfExists)
+                            {
+                                if ()
+                            }
+                        }
+                    }
+                }
+                finally
+                {
+                }
+            }
+        }
+
+        private void GetBucketAndLockNo(
+            int hashcode, out int bucketNo, out int lockNo, int bucketCount, int lockCount)
+        {
+            //0x7FFFFFFF 是long int的最大值 与它按位与数据小于等于这个最大值
+            bucketNo = (hashcode & 0x7fffffff) % bucketCount;
+            lockNo = bucketNo % lockCount;
+        }
+
+        // Whether TValue is a type that can be written atomically (i.e., with no danger of torn reads)
+        private static readonly bool s_isValueWriteAtomic = IsValueWriteAtomic();
+
+        /// <summary>
+        /// Determines whether type TValue can be written atomically
+        /// </summary>
+        private static bool IsValueWriteAtomic()
+        {
+            Type valueType = typeof(TValue);
+
+            //
+            // Section 12.6.6 of ECMA CLI explains which types can be read and written atomically without
+            // the risk of tearing.
+            //
+            // See http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-335.pdf
+            //
+            if (valueType.IsClass)
+            {
+                return true;
+            }
+            switch (Type.GetTypeCode(valueType))
+            {
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.Char:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.SByte:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                    return true;
+
+                case TypeCode.Int64:
+                case TypeCode.Double:
+                case TypeCode.UInt64:
+                    return IntPtr.Size == 8;
+
+                default:
+                    return false;
+            }
+        }
+
+        #endregion Private
     }
 }
