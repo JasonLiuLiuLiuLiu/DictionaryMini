@@ -211,6 +211,10 @@ namespace DictionaryMini
                     if (lockTaken)
                         Monitor.Exit(tables.m_locks[lockNo]);
                 }
+
+                if (resizeDesired)
+                {
+                }
             }
         }
 
