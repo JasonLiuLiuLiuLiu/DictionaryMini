@@ -130,11 +130,11 @@ namespace DictionaryMini
 
                 //https://www.cnblogs.com/blurhkh/p/10357576.html
                 //需要了解一下值传递和引用传递
-                Tables table = m_tables;
-                IEqualityComparer<TKey> comparer = table.m_comparer;
+                Tables tables = m_tables;
+                IEqualityComparer<TKey> comparer = tables.m_comparer;
                 hashcode = comparer.GetHashCode(key);
 
-                GetBucketAndLockNo(hashcode, out bucketNo, out lockNo, table.m_buckets.Length, table.m_locks.Length);
+                GetBucketAndLockNo(hashcode, out bucketNo, out lockNo, tables.m_buckets.Length, tables.m_locks.Length);
 
                 bool resizeDesired = false;
                 bool lockTaken = false;
@@ -142,15 +142,15 @@ namespace DictionaryMini
                 try
                 {
                     if (acquireLock)
-                        Monitor.Enter(table.m_locks[lockNo], ref lockTaken);
+                        Monitor.Enter(tables.m_locks[lockNo], ref lockTaken);
 
                     //如果表刚刚调整了大小，我们可能没有持有正确的锁，必须重试。
                     //当然这种情况很少见
-                    if (table != m_tables)
+                    if (tables != m_tables)
                         continue;
 
                     Node prev = null;
-                    for (Node node = table.m_buckets[bucketNo]; node != null; node = node.m_next)
+                    for (Node node = tables.m_buckets[bucketNo]; node != null; node = node.m_next)
                     {
                         if (comparer.Equals(node.m_key, key))
                         {
@@ -158,13 +158,58 @@ namespace DictionaryMini
                             //我们需要为更新创建一个node，以支持不能以原子方式写入的TValue类型，因为free-lock 读取可能同时发生。
                             if (updateIfExists)
                             {
-                                if ()
+                                if (s_isValueWriteAtomic)
+                                {
+                                    node.m_value = value;
+                                }
+                                else
+                                {
+                                    Node newNode = new Node(node.m_key, value, hashcode, node.m_next);
+                                    if (prev == null)
+                                    {
+                                        tables.m_buckets[bucketNo] = newNode;
+                                    }
+                                    else
+                                    {
+                                        prev.m_next = newNode;
+                                    }
+                                }
+
+                                resultingValue = value;
                             }
+                            else
+                            {
+                                resultingValue = node.m_value;
+                            }
+
+                            return false;
                         }
+
+                        prev = node;
+                    }
+
+                    //key没有在bucket中找到,则插入该数据
+                    Volatile.Write<Node>(ref tables.m_buckets[bucketNo], new Node(key, value, hashcode, tables.m_buckets[bucketNo]));
+                    //当m_countPerLock超过Int Max时会抛出OverflowException
+                    checked
+                    {
+                        tables.m_countPerLock[lockNo]++;
+                    }
+
+                    //
+                    // If the number of elements guarded by this lock has exceeded the budget, resize the bucket table.
+                    // It is also possible that GrowTable will increase the budget but won't resize the bucket table.
+                    // That happens if the bucket table is found to be poorly utilized due to a bad hash function.
+                    //
+                    if (tables.m_countPerLock[lockNo] > m_budget)
+                    {
+                        resizeDesired = true;
                     }
                 }
                 finally
                 {
+                    if (lockTaken)
+                        Monitor.Exit(tables.m_locks[lockNo]);
                 }
             }
         }
@@ -191,7 +236,7 @@ namespace DictionaryMini
             // Section 12.6.6 of ECMA CLI explains which types can be read and written atomically without
             // the risk of tearing.
             //
-            // See http://www.ecma-international.org/publications/files/ECMA-ST/Ecma-335.pdf
+            // See http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf
             //
             if (valueType.IsClass)
             {
