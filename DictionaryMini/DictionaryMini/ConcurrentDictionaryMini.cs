@@ -214,6 +214,7 @@ namespace DictionaryMini
 
                 if (resizeDesired)
                 {
+                    GrowTable(tables, tables.m_comparer, false, m_keyRehashCount);
                 }
             }
         }
@@ -267,6 +268,11 @@ namespace DictionaryMini
                 default:
                     return false;
             }
+        }
+
+        private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool regenerateHashKeys,
+            int rehashCount)
+        {
         }
 
         #endregion Private
