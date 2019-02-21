@@ -50,7 +50,10 @@ namespace DictionaryMini
 
         private int m_keyRehashCount;
 
+        //在触发调整大小操作之前，每个锁的最大元素数
         private int m_budget;
+
+        private const int MAX_LOCK_NUMBER = 1024;
 
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
         {
@@ -276,11 +279,130 @@ namespace DictionaryMini
             int locksAcquired = 0;
             try
             {
+                //首先锁住第一个lock进行resize操作.
+                AcquireLocks(0, 1, ref locksAcquired);
+
+                if (regenerateHashKeys && rehashCount == m_keyRehashCount)
+                {
+                    tables = m_tables;
+                }
+                else
+                {
+                    if (tables != m_tables)
+                        return;
+
+                    long approxCount = 0;
+                    for (int i = 0; i < tables.m_countPerLock.Length; i++)
+                    {
+                        approxCount += tables.m_countPerLock[i];
+                    }
+
+                    //如果bucket数组太空，则将预算加倍，而不是调整表的大小
+                    if (approxCount < tables.m_buckets.Length / 4)
+                    {
+                        m_budget = 2 * m_budget;
+                        if (m_budget < 0)
+                        {
+                            m_budget = int.MaxValue;
+                        }
+
+                        return;
+                    }
+                }
+
+                int newLength = 0;
+                bool maximizeTableSize = false;
+                try
+                {
+                    checked
+                    {
+                        newLength = tables.m_buckets.Length * 2 + 1;
+                        while (newLength % 3 == 0 || newLength % 5 == 0 || newLength % 7 == 0)
+                        {
+                            newLength += 2;
+                        }
+
+                        if (newLength > int.MaxValue)
+                        {
+                            maximizeTableSize = true;
+                        }
+                    }
+                }
+                catch (OverflowException)
+                {
+                    maximizeTableSize = true;
+                }
+
+                if (maximizeTableSize)
+                {
+                    newLength = int.MaxValue;
+
+                    m_budget = int.MaxValue;
+                }
+
+                AcquireLocks(1, tables.m_locks.Length, ref locksAcquired);
+
+                object[] newLocks = tables.m_locks;
+
+                //Add more locks
+                if (m_growLockArry && tables.m_locks.Length < MAX_LOCK_NUMBER)
+                {
+                    newLocks = new object[tables.m_locks.Length * 2];
+                    Array.Copy(tables.m_locks, newLocks, tables.m_locks.Length);
+
+                    for (int i = tables.m_locks.Length; i < newLocks.Length; i++)
+                    {
+                        newLocks[i] = new object();
+                    }
+                }
+
+                Node[] newBuckets = new Node[newLength];
+                int[] newCountPerLock = new int[newLocks.Length];
+
+                for (int i = 0; i < tables.m_buckets.Length; i++)
+                {
+                    Node current = tables.m_buckets[i];
+                    while (current != null)
+                    {
+                        Node next = current.m_next;
+                        int newBucketNo, newLockNo;
+                        int nodeHashCode = current.m_hashcode;
+
+                        if (regenerateHashKeys)
+                        {
+                            //Recompute the hash from the key
+                            nodeHashCode = newComparer.GetHashCode(current.m_key);
+                        }
+
+                        GetBucketAndLockNo(nodeHashCode, out newBucketNo, out newLockNo, newBuckets.Length,
+                            newLocks.Length);
+
+                        newBuckets[newBucketNo] = new Node(current.m_key, current.m_value, nodeHashCode,
+                            newBuckets[newBucketNo]);
+                        checked
+                        {
+                            newCountPerLock[newLockNo]++;
+                        }
+
+                        current = next;
+                    }
+                }
+
+                if (regenerateHashKeys)
+                {
+                    unchecked
+                    {
+                        m_keyRehashCount++;
+                    }
+                }
+
+                m_budget = Math.Max(1, newBuckets.Length / newLocks.Length);
+
+                m_tables = new Tables(newBuckets, newLocks, newCountPerLock, newComparer);
             }
-            catch (Exception e)
+            finally
             {
-                Console.WriteLine(e);
-                throw;
+                ReleaseLocks(0, locksAcquired);
             }
         }
 
