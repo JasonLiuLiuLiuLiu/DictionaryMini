@@ -273,6 +273,42 @@ namespace DictionaryMini
         private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool regenerateHashKeys,
             int rehashCount)
         {
+            int locksAcquired = 0;
+            try
+            {
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+        private void AcquireLocks(int fromInclusive, int toExclusive, ref int locksAcquired)
+        {
+            object[] locks = m_tables.m_locks;
+
+            for (int i = fromInclusive; i < toExclusive; i++)
+            {
+                bool lockTaken = false;
+                try
+                {
+                    Monitor.Enter(locks[i], ref lockTaken);
+                }
+                finally
+                {
+                    if (lockTaken)
+                        locksAcquired++;
+                }
+            }
+        }
+
+        private void ReleaseLocks(int fromInclusive, int toExclusive)
+        {
+            for (int i = fromInclusive; i < toExclusive; i++)
+            {
+                Monitor.Exit(m_tables.m_locks[i]);
+            }
         }
 
         #endregion Private
