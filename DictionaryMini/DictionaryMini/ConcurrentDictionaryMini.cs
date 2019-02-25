@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace DictionaryMini
 {
-    public class ConcurrentDictionaryMini<TKey, TValue> : IDictionary<TKey, TValue>
+    public class ConcurrentDictionaryMini<TKey, TValue>
     {
         private class Node
         {
@@ -42,45 +42,106 @@ namespace DictionaryMini
 
         private volatile Tables m_tables;
 
-        //该Comparer只提供给序列化使用
-        internal IEqualityComparer<TKey> m_comparer;
-
         //时否动态扩充锁的数量
-        private readonly bool m_growLockArry;
+        private readonly bool m_growLockArray;
 
         private int m_keyRehashCount;
 
         //在触发调整大小操作之前，每个锁的最大元素数
         private int m_budget;
 
+        private const int DEFAULT_CAPACITY = 31;
+
         private const int MAX_LOCK_NUMBER = 1024;
 
-        public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+        public ConcurrentDictionaryMini() : this(DefaultConcurrencyLevel, DEFAULT_CAPACITY, true,
+            EqualityComparer<TKey>.Default)
         {
-            throw new NotImplementedException();
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+        internal ConcurrentDictionaryMini(int concurrencyLevel, int capacity, bool growLockArray, IEqualityComparer<TKey> comparer)
         {
-            return GetEnumerator();
+            if (concurrencyLevel < 1)
+            {
+                throw new Exception("concurrencyLevel 必须为正数");
+            }
+
+            if (capacity < 0)
+            {
+                throw new Exception("capacity 不能为负数.");
+            }
+
+            if (capacity < concurrencyLevel)
+            {
+                capacity = concurrencyLevel;
+            }
+
+            object[] locks = new object[concurrencyLevel];
+            for (int i = 0; i < locks.Length; i++)
+            {
+                locks[i] = new object();
+            }
+
+            int[] countPerLock = new int[locks.Length];
+            Node[] buckets = new Node[capacity];
+            m_tables = new Tables(buckets, locks, countPerLock, comparer);
+
+            m_growLockArray = growLockArray;
+            m_budget = buckets.Length / locks.Length;
         }
 
-        public void Add(KeyValuePair<TKey, TValue> item)
+        public bool TryAdd(TKey key, TValue value)
         {
-            throw new NotImplementedException();
+            if (key == null) throw new ArgumentNullException("key");
+            TValue dummy;
+            return TryAddInternal(key, value, false, true, out dummy);
+        }
+
+        public bool ContainsKey(TKey key)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+
+            TValue throwAwayValue;
+            return TryGetValue(key, out throwAwayValue);
+        }
+
+        public bool TryGetValue(TKey key, out TValue value)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+
+            int bucketNo, lockNoUnused;
+
+            // We must capture the m_buckets field in a local variable. It is set to a new table on each table resize.
+            Tables tables = m_tables;
+            IEqualityComparer<TKey> comparer = tables.m_comparer;
+            GetBucketAndLockNo(comparer.GetHashCode(key), out bucketNo, out lockNoUnused, tables.m_buckets.Length, tables.m_locks.Length);
+
+            // We can get away w/out a lock here.
+            // The Volatile.Read ensures that the load of the fields of 'n' doesn't move before the load from buckets[i].
+            Node n = Volatile.Read<Node>(ref tables.m_buckets[bucketNo]);
+
+            while (n != null)
+            {
+                if (comparer.Equals(n.m_key, key))
+                {
+                    value = n.m_value;
+                    return true;
+                }
+                n = n.m_next;
+            }
+
+            value = default(TValue);
+            return false;
+        }
+
+        public bool TryRemove(TKey key, out TValue value)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+
+            return TryRemoveInternal(key, out value, false, default(TValue));
         }
 
         public void Clear()
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Contains(KeyValuePair<TKey, TValue> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
         {
             throw new NotImplementedException();
         }
@@ -90,25 +151,7 @@ namespace DictionaryMini
             throw new NotImplementedException();
         }
 
-        public int Count { get; }
-        public bool IsReadOnly { get; }
-
-        public void Add(TKey key, TValue value)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool ContainsKey(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
         public bool Remove(TKey key)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool TryGetValue(TKey key, out TValue value)
         {
             throw new NotImplementedException();
         }
@@ -119,10 +162,9 @@ namespace DictionaryMini
             set => throw new NotImplementedException();
         }
 
-        public ICollection<TKey> Keys { get; }
-        public ICollection<TValue> Values { get; }
-
         #region Private
+
+        private
 
         private bool TryAddInternal(TKey key, TValue value, bool updateIfExists, bool acquireLock, out TValue resultingValue)
         {
@@ -232,6 +274,11 @@ namespace DictionaryMini
 
         // Whether TValue is a type that can be written atomically (i.e., with no danger of torn reads)
         private static readonly bool s_isValueWriteAtomic = IsValueWriteAtomic();
+
+        private static int DefaultConcurrencyLevel
+        {
+            get { return Environment.ProcessorCount; }
+        }
 
         /// <summary>
         /// Determines whether type TValue can be written atomically
@@ -345,7 +392,7 @@ namespace DictionaryMini
                 object[] newLocks = tables.m_locks;
 
                 //Add more locks
-                if (m_growLockArry && tables.m_locks.Length < MAX_LOCK_NUMBER)
+                if (m_growLockArray && tables.m_locks.Length < MAX_LOCK_NUMBER)
                 {
                     newLocks = new object[tables.m_locks.Length * 2];
                     Array.Copy(tables.m_locks, newLocks, tables.m_locks.Length);
