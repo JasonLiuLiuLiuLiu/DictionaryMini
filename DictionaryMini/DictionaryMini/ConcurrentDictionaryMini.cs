@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 
 namespace DictionaryMini
@@ -97,28 +95,18 @@ namespace DictionaryMini
             return TryAddInternal(key, value, false, true, out dummy);
         }
 
-        public bool ContainsKey(TKey key)
-        {
-            if (key == null) throw new ArgumentNullException("key");
-
-            TValue throwAwayValue;
-            return TryGetValue(key, out throwAwayValue);
-        }
-
         public bool TryGetValue(TKey key, out TValue value)
         {
             if (key == null) throw new ArgumentNullException("key");
 
-            int bucketNo, lockNoUnused;
-
             // We must capture the m_buckets field in a local variable. It is set to a new table on each table resize.
             Tables tables = m_tables;
             IEqualityComparer<TKey> comparer = tables.m_comparer;
-            GetBucketAndLockNo(comparer.GetHashCode(key), out bucketNo, out lockNoUnused, tables.m_buckets.Length, tables.m_locks.Length);
+            GetBucketAndLockNo(comparer.GetHashCode(key), out var bucketNo, out _, tables.m_buckets.Length, tables.m_locks.Length);
 
             // We can get away w/out a lock here.
             // The Volatile.Read ensures that the load of the fields of 'n' doesn't move before the load from buckets[i].
-            Node n = Volatile.Read<Node>(ref tables.m_buckets[bucketNo]);
+            Node n = Volatile.Read(ref tables.m_buckets[bucketNo]);
 
             while (n != null)
             {
@@ -134,6 +122,13 @@ namespace DictionaryMini
             return false;
         }
 
+        public bool ContainsKey(TKey key)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+
+            return TryGetValue(key, out _);
+        }
+
         public bool TryRemove(TKey key, out TValue value)
         {
             if (key == null) throw new ArgumentNullException("key");
@@ -143,28 +138,94 @@ namespace DictionaryMini
 
         public void Clear()
         {
-            throw new NotImplementedException();
-        }
+            int locksAcquired = 0;
+            try
+            {
+                AcquireAllLocks(ref locksAcquired);
 
-        public bool Remove(KeyValuePair<TKey, TValue> item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool Remove(TKey key)
-        {
-            throw new NotImplementedException();
+                Tables newTables = new Tables(new Node[DEFAULT_CAPACITY], m_tables.m_locks, new int[m_tables.m_countPerLock.Length], m_tables.m_comparer);
+                m_tables = newTables;
+                m_budget = Math.Max(1, newTables.m_buckets.Length / newTables.m_locks.Length);
+            }
+            finally
+            {
+                ReleaseLocks(0, locksAcquired);
+            }
         }
 
         public TValue this[TKey key]
         {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
+            get
+            {
+                TValue value;
+                if (!TryGetValue(key, out value))
+                {
+                    throw new KeyNotFoundException();
+                }
+
+                return value;
+            }
+            set
+            {
+                if (key == null) throw new ArgumentNullException("key");
+                TValue dummy;
+                TryAddInternal(key, value, true, true, out dummy);
+            }
         }
 
         #region Private
 
-        private
+        private bool TryRemoveInternal(TKey key, out TValue value, bool matchValue, TValue oldValue)
+        {
+            while (true)
+            {
+                Tables tables = m_tables;
+
+                IEqualityComparer<TKey> comparer = tables.m_comparer;
+
+                int bucketNo, lockNo;
+
+                GetBucketAndLockNo(comparer.GetHashCode(key), out bucketNo, out lockNo, tables.m_buckets.Length, tables.m_locks.Length);
+
+                lock (tables.m_locks[lockNo])
+                {
+                    if (tables != m_tables)
+                        continue;
+
+                    Node prev = null;
+                    for (Node curr = tables.m_buckets[bucketNo]; curr != null; curr = curr.m_next)
+                    {
+                        if (comparer.Equals(curr.m_key, key))
+                        {
+                            if (matchValue)
+                            {
+                                bool valuesMatch = EqualityComparer<TValue>.Default.Equals(oldValue, curr.m_value);
+                                if (!valuesMatch)
+                                {
+                                    value = default(TValue);
+                                    return false;
+                                }
+                            }
+                            if (prev == null)
+                                Volatile.Write(ref tables.m_buckets[bucketNo], curr.m_next);
+                            else
+                            {
+                                prev.m_next = curr.m_next;
+                            }
+
+                            value = curr.m_value;
+                            tables.m_countPerLock[lockNo]--;
+                            return true;
+                        }
+
+                        prev = curr;
+                    }
+                }
+
+                value = default(TValue);
+                return false;
+            }
+        }
 
         private bool TryAddInternal(TKey key, TValue value, bool updateIfExists, bool acquireLock, out TValue resultingValue)
         {
@@ -234,7 +295,7 @@ namespace DictionaryMini
                     }
 
                     //key没有在bucket中找到,则插入该数据
-                    Volatile.Write<Node>(ref tables.m_buckets[bucketNo], new Node(key, value, hashcode, tables.m_buckets[bucketNo]));
+                    Volatile.Write(ref tables.m_buckets[bucketNo], new Node(key, value, hashcode, tables.m_buckets[bucketNo]));
                     //当m_countPerLock超过Int Max时会抛出OverflowException
                     checked
                     {
@@ -368,11 +429,6 @@ namespace DictionaryMini
                         {
                             newLength += 2;
                         }
-
-                        if (newLength > int.MaxValue)
-                        {
-                            maximizeTableSize = true;
-                        }
                     }
                 }
                 catch (OverflowException)
@@ -451,6 +507,16 @@ namespace DictionaryMini
             {
                 ReleaseLocks(0, locksAcquired);
             }
+        }
+
+        private void AcquireAllLocks(ref int locksAcquired)
+        {
+            // First, acquire lock 0
+            AcquireLocks(0, 1, ref locksAcquired);
+
+            // Now that we have lock 0, the m_locks array will not change (i.e., grow),
+            // and so we can safely read m_locks.Length.
+            AcquireLocks(1, m_tables.m_locks.Length, ref locksAcquired);
         }
 
         private void AcquireLocks(int fromInclusive, int toExclusive, ref int locksAcquired)
