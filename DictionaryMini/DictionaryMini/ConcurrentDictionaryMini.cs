@@ -322,6 +322,9 @@ namespace DictionaryMini
                 {
                     GrowTable(tables, tables.m_comparer, false, m_keyRehashCount);
                 }
+
+                resultingValue = value;
+                return true;
             }
         }
 
