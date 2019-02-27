@@ -4,4 +4,5 @@
 有网友在文章底部评论,说我的Remove和Add方法没有考虑线程安全问题.  
 <https://docs.microsoft.com/en-us/dotnet/api/system.collections.generic.dictionary-2?redirectedfrom=MSDN&view=netframework-4.7.2>  
 
-在查阅相关资料后,发现只要未对集合进行修改,Dictionary就可以被多个线程同时读取,但是如果需要多个线程同时访问字典进行添加,修改操作,那就必须自己进行加锁了.  
+查阅相关资料后,发现字典.net中Dictionary本身时不支持线程安全的,如果要想使用支持线程安全的字典,那么我们就要使用ConcurrentDictionary了.
+在研究ConcurrentDictionary的源码后,我觉得在ConcurrentDictionary的线程安全的解决思路我们还可以推广到我们项目中的其他高并发场景,所以,我又来分享我的学习成果了.  
