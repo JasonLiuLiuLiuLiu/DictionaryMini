@@ -21,5 +21,5 @@ ConsurrentDictionary是可由多个线程同时访问的线程安全的Dictionar
 我们回忆一下字典,  在keys与实际存储数据的entries中间,有个buckets作为桥梁,通过hash function获取了key的哈希值后,对这个哈希值进行取余,余数作为buckets的index,而buckets的value就是这个key对应的entry所在的索引,整个过程的时间复杂度为1.    
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)  
 
-ConsurrentDictionary的数据存储类似,只是buckets有了存储数据的职责.  
+ConsurrentDictionary的数据存储类似,只是buckets除了有dictionary中的buckets中桥梁的作用外,还有了存储数据的职责.  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/ConsurrentDictionary.png?sanitize=true)  
