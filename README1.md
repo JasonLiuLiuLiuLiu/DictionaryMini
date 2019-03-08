@@ -66,3 +66,153 @@ private class Node
         }
 ```
 
+在构造函数中创建默认的Table
+
+``` C#
+//构造函数
+        public ConcurrentDictionaryMini() : this(DefaultConcurrencyLevel, DEFAULT_CAPACITY, true,
+            EqualityComparer<TKey>.Default)
+        {
+
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="concurrencyLevel">并发等级,默认为CPU的线程数</param>
+        /// <param name="capacity">默认容量,31,超过31后会自动扩容</param>
+        /// <param name="growLockArray">时否动态扩充锁的数量</param>
+        /// <param name="comparer">key的比较器</param>
+        internal ConcurrentDictionaryMini(int concurrencyLevel, int capacity, bool growLockArray, IEqualityComparer<TKey> comparer)
+        {
+            if (concurrencyLevel < 1)
+            {
+                throw new Exception("concurrencyLevel 必须为正数");
+            }
+
+            if (capacity < 0)
+            {
+                throw new Exception("capacity 不能为负数.");
+            }
+
+            if (capacity < concurrencyLevel)
+            {
+                capacity = concurrencyLevel;
+            }
+
+            object[] locks = new object[concurrencyLevel];
+            for (int i = 0; i < locks.Length; i++)
+            {
+                locks[i] = new object();
+            }
+
+            int[] countPerLock = new int[locks.Length];
+            Node[] buckets = new Node[capacity];
+            m_tables = new Tables(buckets, locks, countPerLock, comparer);
+
+            m_growLockArray = growLockArray;
+            m_budget = buckets.Length / locks.Length;
+        }
+```
+
+``` C#
+ private bool TryAddInternal(TKey key, TValue value, bool updateIfExists, bool acquireLock, out TValue resultingValue)
+        {
+            while (true)
+            {
+                int bucketNo, lockNo;
+                int hashcode;
+
+                //https://www.cnblogs.com/blurhkh/p/10357576.html
+                //需要了解一下值传递和引用传递
+                Tables tables = m_tables;
+                IEqualityComparer<TKey> comparer = tables.m_comparer;
+                hashcode = comparer.GetHashCode(key);
+
+                GetBucketAndLockNo(hashcode, out bucketNo, out lockNo, tables.m_buckets.Length, tables.m_locks.Length);
+
+                bool resizeDesired = false;
+                bool lockTaken = false;
+
+                try
+                {
+                    if (acquireLock)
+                        Monitor.Enter(tables.m_locks[lockNo], ref lockTaken);
+
+                    //如果表刚刚调整了大小，我们可能没有持有正确的锁，必须重试。
+                    //当然这种情况很少见
+                    if (tables != m_tables)
+                        continue;
+
+                    Node prev = null;
+                    for (Node node = tables.m_buckets[bucketNo]; node != null; node = node.m_next)
+                    {
+                        if (comparer.Equals(node.m_key, key))
+                        {
+                            //key在字典里找到了。如果允许更新，则更新该key的值。
+                            //我们需要为更新创建一个node，以支持不能以原子方式写入的TValue类型，因为free-lock 读取可能同时发生。
+                            if (updateIfExists)
+                            {
+                                if (s_isValueWriteAtomic)
+                                {
+                                    node.m_value = value;
+                                }
+                                else
+                                {
+                                    Node newNode = new Node(node.m_key, value, hashcode, node.m_next);
+                                    if (prev == null)
+                                    {
+                                        tables.m_buckets[bucketNo] = newNode;
+                                    }
+                                    else
+                                    {
+                                        prev.m_next = newNode;
+                                    }
+                                }
+
+                                resultingValue = value;
+                            }
+                            else
+                            {
+                                resultingValue = node.m_value;
+                            }
+
+                            return false;
+                        }
+
+                        prev = node;
+                    }
+
+                    //key没有在bucket中找到,则插入该数据
+                    Volatile.Write(ref tables.m_buckets[bucketNo], new Node(key, value, hashcode, tables.m_buckets[bucketNo]));
+                    //当m_countPerLock超过Int Max时会抛出OverflowException
+                    checked
+                    {
+                        tables.m_countPerLock[lockNo]++;
+                    }
+
+                    //
+                    // If the number of elements guarded by this lock has exceeded the budget, resize the bucket table.
+                    // It is also possible that GrowTable will increase the budget but won't resize the bucket table.
+                    // That happens if the bucket table is found to be poorly utilized due to a bad hash function.
+                    //
+                    if (tables.m_countPerLock[lockNo] > m_budget)
+                    {
+                        resizeDesired = true;
+                    }
+                }
+                finally
+                {
+                    if (lockTaken)
+                        Monitor.Exit(tables.m_locks[lockNo]);
+                }
+
+                if (resizeDesired)
+                {
+                    GrowTable(tables, tables.m_comparer, false, m_keyRehashCount);
+                }
+
+                resultingValue = value;
+                return true;
+            }
+        }
+```
