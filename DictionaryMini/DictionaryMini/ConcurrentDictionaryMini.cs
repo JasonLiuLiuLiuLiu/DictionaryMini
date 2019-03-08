@@ -8,11 +8,12 @@ namespace DictionaryMini
     {
         private class Node
         {
-            internal TKey m_key;
-            internal TValue m_value;
-            internal volatile Node m_next;
-            internal int m_hashcode;
+            internal TKey m_key;   //数据的key
+            internal TValue m_value;  //数据值
+            internal volatile Node m_next;  //当前Node的下级节点
+            internal int m_hashcode;  //key的hashcode
 
+            //构造函数
             internal Node(TKey key, TValue value, int hashcode, Node next)
             {
                 m_key = key;
@@ -24,11 +25,12 @@ namespace DictionaryMini
 
         private class Tables
         {
-            internal readonly Node[] m_buckets;
-            internal readonly object[] m_locks;
-            internal volatile int[] m_countPerLock;
-            internal readonly IEqualityComparer<TKey> m_comparer;
+            internal readonly Node[] m_buckets;   //上文中提到的buckets
+            internal readonly object[] m_locks;   //线程锁
+            internal volatile int[] m_countPerLock;  //索格锁所管理的数据数量
+            internal readonly IEqualityComparer<TKey> m_comparer;  //当前key对应的type的比较器
 
+            //构造函数
             internal Tables(Node[] buckets, object[] locks, int[] countPerlock, IEqualityComparer<TKey> comparer)
             {
                 m_buckets = buckets;
