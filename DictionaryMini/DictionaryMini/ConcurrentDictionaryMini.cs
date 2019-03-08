@@ -54,11 +54,19 @@ namespace DictionaryMini
 
         private const int MAX_LOCK_NUMBER = 1024;
 
+        //构造函数
         public ConcurrentDictionaryMini() : this(DefaultConcurrencyLevel, DEFAULT_CAPACITY, true,
             EqualityComparer<TKey>.Default)
         {
-        }
 
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="concurrencyLevel">并发等级,默认为CPU的线程数</param>
+        /// <param name="capacity">默认容量,31,超过31后会自动扩容</param>
+        /// <param name="growLockArray">时否动态扩充锁的数量</param>
+        /// <param name="comparer">key的比较器</param>
         internal ConcurrentDictionaryMini(int concurrencyLevel, int capacity, bool growLockArray, IEqualityComparer<TKey> comparer)
         {
             if (concurrencyLevel < 1)
@@ -305,9 +313,9 @@ namespace DictionaryMini
                     }
 
                     //
-                    // If the number of elements guarded by this lock has exceeded the budget, resize the bucket table.
-                    // It is also possible that GrowTable will increase the budget but won't resize the bucket table.
-                    // That happens if the bucket table is found to be poorly utilized due to a bad hash function.
+                    // 如果m_countPerLock[lockNo] > m_budget，则需要调整buckets的大小。
+                    // GrowTable也可能会增加m_budget，但不会调整bucket table的大小。.
+                    // 如果发现bucket table利用率很低，也会发生这种情况。
                     //
                     if (tables.m_countPerLock[lockNo] > m_budget)
                     {
