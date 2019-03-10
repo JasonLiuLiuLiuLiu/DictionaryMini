@@ -17,12 +17,15 @@ ConsurrentDictionary是可由多个线程同时访问的线程安全的Dictionar
 
 在上一篇文章介绍了字典`Dictionary`的基本工作原理后,对这个`ConsurrentDictionary`的原理应该也不难理解,但它又不是简简单单地读写加个`lock`那么简单,他是如何实现高效的线程安全的呢?
 
-# 工作原理  
-我们回忆一下字典,  在keys与实际存储数据的entries中间,有个buckets作为桥梁,通过hash function获取了key的哈希值后,对这个哈希值进行取余,余数作为buckets的index,而buckets的value就是这个key对应的entry所在的索引,整个过程的时间复杂度为1.    
+# 工作原理
+
+我们回忆一下字典,  在keys与实际存储数据的entries中间,有个buckets作为桥梁,通过hash function获取了key的哈希值后,对这个哈希值进行取余,余数作为buckets的index,而buckets的value就是这个key对应的entry所在的索引,整个过程的时间复杂度为1.  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)  
 
 ConsurrentDictionary的数据存储类似,只是buckets除了有dictionary中的buckets中桥梁的作用外,还有了存储数据的职责.  
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/ConsurrentDictionary.png?sanitize=true)  
+
+## Node
 
 ConcurrentDictionary中的单个数据存储在Node中.  
 
@@ -44,6 +47,8 @@ private class Node
             }
         }
 ```
+
+## Table
 
 而整个ConcurrentDictionary的数据其实就是存储在这样的一个Table中.
 
@@ -113,6 +118,10 @@ private class Node
             m_budget = buckets.Length / locks.Length;
         }
 ```
+
+## Add
+
+向table中添加元素.
 
 ``` C#
  private bool TryAddInternal(TKey key, TValue value, bool updateIfExists, bool acquireLock, out TValue resultingValue)
@@ -213,6 +222,173 @@ private class Node
 
                 resultingValue = value;
                 return true;
+            }
+        }
+```
+
+## Get
+
+从Table中获取元素
+
+``` C#
+public bool TryGetValue(TKey key, out TValue value)
+        {
+            if (key == null) throw new ArgumentNullException("key");
+
+            // We must capture the m_buckets field in a local variable. It is set to a new table on each table resize.
+            Tables tables = m_tables;
+            IEqualityComparer<TKey> comparer = tables.m_comparer;
+            GetBucketAndLockNo(comparer.GetHashCode(key), out var bucketNo, out _, tables.m_buckets.Length, tables.m_locks.Length);
+
+            // We can get away w/out a lock here.
+            // The Volatile.Read ensures that the load of the fields of 'n' doesn't move before the load from buckets[i].
+            Node n = Volatile.Read(ref tables.m_buckets[bucketNo]);
+
+            while (n != null)
+            {
+                if (comparer.Equals(n.m_key, key))
+                {
+                    value = n.m_value;
+                    return true;
+                }
+                n = n.m_next;
+            }
+
+            value = default(TValue);
+            return false;
+        }
+```
+
+## Grow table
+
+Table的扩容
+
+``` C#
+ private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool regenerateHashKeys,
+            int rehashCount)
+        {
+            int locksAcquired = 0;
+            try
+            {
+                //首先锁住第一个lock进行resize操作.
+                AcquireLocks(0, 1, ref locksAcquired);
+
+                if (regenerateHashKeys && rehashCount == m_keyRehashCount)
+                {
+                    tables = m_tables;
+                }
+                else
+                {
+                    if (tables != m_tables)
+                        return;
+
+                    long approxCount = 0;
+                    for (int i = 0; i < tables.m_countPerLock.Length; i++)
+                    {
+                        approxCount += tables.m_countPerLock[i];
+                    }
+
+                    //如果bucket数组太空，则将预算加倍，而不是调整表的大小
+                    if (approxCount < tables.m_buckets.Length / 4)
+                    {
+                        m_budget = 2 * m_budget;
+                        if (m_budget < 0)
+                        {
+                            m_budget = int.MaxValue;
+                        }
+
+                        return;
+                    }
+                }
+
+                int newLength = 0;
+                bool maximizeTableSize = false;
+                try
+                {
+                    checked
+                    {
+                        newLength = tables.m_buckets.Length * 2 + 1;
+                        while (newLength % 3 == 0 || newLength % 5 == 0 || newLength % 7 == 0)
+                        {
+                            newLength += 2;
+                        }
+                    }
+                }
+                catch (OverflowException)
+                {
+                    maximizeTableSize = true;
+                }
+
+                if (maximizeTableSize)
+                {
+                    newLength = int.MaxValue;
+
+                    m_budget = int.MaxValue;
+                }
+
+                AcquireLocks(1, tables.m_locks.Length, ref locksAcquired);
+
+                object[] newLocks = tables.m_locks;
+
+                //Add more locks
+                if (m_growLockArray && tables.m_locks.Length < MAX_LOCK_NUMBER)
+                {
+                    newLocks = new object[tables.m_locks.Length * 2];
+                    Array.Copy(tables.m_locks, newLocks, tables.m_locks.Length);
+
+                    for (int i = tables.m_locks.Length; i < newLocks.Length; i++)
+                    {
+                        newLocks[i] = new object();
+                    }
+                }
+
+                Node[] newBuckets = new Node[newLength];
+                int[] newCountPerLock = new int[newLocks.Length];
+
+                for (int i = 0; i < tables.m_buckets.Length; i++)
+                {
+                    Node current = tables.m_buckets[i];
+                    while (current != null)
+                    {
+                        Node next = current.m_next;
+                        int newBucketNo, newLockNo;
+                        int nodeHashCode = current.m_hashcode;
+
+                        if (regenerateHashKeys)
+                        {
+                            //Recompute the hash from the key
+                            nodeHashCode = newComparer.GetHashCode(current.m_key);
+                        }
+
+                        GetBucketAndLockNo(nodeHashCode, out newBucketNo, out newLockNo, newBuckets.Length,
+                            newLocks.Length);
+
+                        newBuckets[newBucketNo] = new Node(current.m_key, current.m_value, nodeHashCode,
+                            newBuckets[newBucketNo]);
+                        checked
+                        {
+                            newCountPerLock[newLockNo]++;
+                        }
+
+                        current = next;
+                    }
+                }
+
+                if (regenerateHashKeys)
+                {
+                    unchecked
+                    {
+                        m_keyRehashCount++;
+                    }
+                }
+
+                m_budget = Math.Max(1, newBuckets.Length / newLocks.Length);
+
+                m_tables = new Tables(newBuckets, newLocks, newCountPerLock, newComparer);
+            }
+            finally
+            {
+                ReleaseLocks(0, locksAcquired);
             }
         }
 ```

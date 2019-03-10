@@ -58,10 +58,10 @@ namespace DictionaryMini
         public ConcurrentDictionaryMini() : this(DefaultConcurrencyLevel, DEFAULT_CAPACITY, true,
             EqualityComparer<TKey>.Default)
         {
-
         }
+
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="concurrencyLevel">并发等级,默认为CPU的线程数</param>
         /// <param name="capacity">默认容量,31,超过31后会自动扩容</param>
