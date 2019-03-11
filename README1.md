@@ -57,7 +57,7 @@ private class Node
         {
             internal readonly Node[] m_buckets;   //上文中提到的buckets
             internal readonly object[] m_locks;   //线程锁
-            internal volatile int[] m_countPerLock;  //索格锁所管理的数据数量
+            internal volatile int[] m_countPerLock;  //每个锁所管理的数据数量
             internal readonly IEqualityComparer<TKey> m_comparer;  //当前key对应的type的比较器
 
             //构造函数
@@ -71,7 +71,7 @@ private class Node
         }
 ```
 
-在构造函数中创建默认的Table
+ConcurrentDictionary会在构造函数中创建默认的Table,这里我对原有的构造函数进行了简化,其中DefaultConcurrencyLevel即默认并发级别为当前计算机的线程数.
 
 ``` C#
 //构造函数
@@ -199,11 +199,9 @@ private class Node
                         tables.m_countPerLock[lockNo]++;
                     }
 
-                    //
-                    // If the number of elements guarded by this lock has exceeded the budget, resize the bucket table.
-                    // It is also possible that GrowTable will increase the budget but won't resize the bucket table.
-                    // That happens if the bucket table is found to be poorly utilized due to a bad hash function.
-                    //
+                    // 如果m_countPerLock[lockNo] > m_budget，则需要调整buckets的大小。
+                    // GrowTable也可能会增加m_budget，但不会调整bucket table的大小。.
+                    // 如果发现bucket table利用率很低，也会发生这种情况。
                     if (tables.m_countPerLock[lockNo] > m_budget)
                     {
                         resizeDesired = true;
@@ -223,6 +221,17 @@ private class Node
                 resultingValue = value;
                 return true;
             }
+        }
+```  
+## 获取LockNo和BucketsNo
+
+``` c#
+private void GetBucketAndLockNo(
+            int hashcode, out int bucketNo, out int lockNo, int bucketCount, int lockCount)
+        {
+            //0x7FFFFFFF 是long int的最大值 与它按位与数据小于等于这个最大值
+            bucketNo = (hashcode & 0x7fffffff) % bucketCount;
+            lockNo = bucketNo % lockCount;
         }
 ```
 
@@ -396,5 +405,48 @@ Table的扩容
 # Q&A
 
 * 如何做到线程安全的?
-* 进行高并发写入时哪些数据类型是线程安全的?为什么?
+* 进行高并发写入时哪些数据类型是线程安全的?为什么?  
+在ConcurrentDictionary中,通过这个函数来判断数据类型数据是否是原子性的,如果该数据是的写入是原子性的,那么可以认为在高并发下该类型的数据的写入是安全的.
+``` C#
+        /// <summary>
+        /// Determines whether type TValue can be written atomically
+        /// </summary>
+        private static bool IsValueWriteAtomic()
+        {
+            Type valueType = typeof(TValue);
+
+            //
+            // Section 12.6.6 of ECMA CLI explains which types can be read and written atomically without
+            // the risk of tearing.
+            //
+            // See http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf
+            //
+            if (valueType.IsClass)
+            {
+                return true;
+            }
+            switch (Type.GetTypeCode(valueType))
+            {
+                case TypeCode.Boolean:
+                case TypeCode.Byte:
+                case TypeCode.Char:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.SByte:
+                case TypeCode.Single:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                    return true;
+
+                case TypeCode.Int64:
+                case TypeCode.Double:
+                case TypeCode.UInt64:
+                    return IntPtr.Size == 8;
+
+                default:
+                    return false;
+            }
+        }
+```
+
 * 为什么在对Table进行错做之前要先声明一个Table变量并对其进行赋值?这样是否多此一举?
