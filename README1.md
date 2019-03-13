@@ -133,13 +133,9 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
 
 ```
 
-## 方法属性
+## 方法
 
-### 基本属性
-
-``` C#
-
-```
+ConcurrentDictionary中较为基础重点的方法分别位Add,Get,Remove,Grow Table方法,其他方法基本上是建立在这四个方法的基础上进行的扩充.  
 
 ### Add
 
@@ -205,7 +201,8 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
         }
 ```
 
-该方法依据CLI规范进行编写,简单来说,32位的计算机,对32字节以下的数据类型写入时可以一次写入的而不需要移动内存指针,64位计算机对64位以下的数据写入时原子性的不需要移动内存指针.保证了写入的安全.
+该方法依据CLI规范进行编写,简单来说,32位的计算机,对32字节以下的数据类型写入时可以一次写入的而不需要移动内存指针,64位计算机对64位以下的数据可一次性写入,不需要移动内存指针.保证了写入的安全.
+详见12.6.6 http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf
 
 ``` C#
 
@@ -350,6 +347,64 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
 
 ```
 
+### Remove
+
+Remove方法实现其实也并不复杂,类似我们链表操作中移除某个Node.移除节点的同时,还要对前后节点进行连接,相信这边小伙伴们肯定很好理解.
+
+``` C#
+ private bool TryRemoveInternal(TKey key, out TValue value, bool matchValue, TValue oldValue)
+        {
+            while (true)
+            {
+                Tables tables = m_tables;
+
+                IEqualityComparer<TKey> comparer = tables.m_comparer;
+
+                int bucketNo, lockNo;
+
+                GetBucketAndLockNo(comparer.GetHashCode(key), out bucketNo, out lockNo, tables.m_buckets.Length, tables.m_locks.Length);
+
+                lock (tables.m_locks[lockNo])
+                {
+                    if (tables != m_tables)
+                        continue;
+
+                    Node prev = null;
+                    for (Node curr = tables.m_buckets[bucketNo]; curr != null; curr = curr.m_next)
+                    {
+                        if (comparer.Equals(curr.m_key, key))
+                        {
+                            if (matchValue)
+                            {
+                                bool valuesMatch = EqualityComparer<TValue>.Default.Equals(oldValue, curr.m_value);
+                                if (!valuesMatch)
+                                {
+                                    value = default(TValue);
+                                    return false;
+                                }
+                            }
+                            if (prev == null)
+                                Volatile.Write(ref tables.m_buckets[bucketNo], curr.m_next);
+                            else
+                            {
+                                prev.m_next = curr.m_next;
+                            }
+
+                            value = curr.m_value;
+                            tables.m_countPerLock[lockNo]--;
+                            return true;
+                        }
+
+                        prev = curr;
+                    }
+                }
+
+                value = default(TValue);
+                return false;
+            }
+        }
+```
+
 ### Grow table
 
 当table中任何一个m_countPerLock的数量超过了设定的阈值后,会触发此操作对Table进行扩容.
@@ -484,3 +539,10 @@ private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool 
         }
 
 ```
+
+# 学习感悟
+
+* lock[]:在以往的线程安全上,我们对数据的保护往往是对数据的修改写入等地方加上lock,这个lock经常上整个上下文中唯一的,这样的设计下就可能会出现多个线程,写入的根本不是一块数据,却要等待前一个线程写入完成下一个线程才能继续操作.在ConcurrentDictionary中,通过哈希算法,找出key的准确lock,如果不同的key,使用的不是同一个lock,那么这多个线程的写入时互补影响的.  
+  
+* 写入要考虑线程安全,读取呢?不可否认,在大部分场景下,读取不必去考虑线程安全,但是在我们这样的链式读取中,需要自上而下地查找,如果不加锁,那么是不是有可能在查找个过程中,链路被修改了呢?所以读也有加锁的必要.
+  
