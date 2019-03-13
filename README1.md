@@ -34,7 +34,9 @@ ConsurrentDictionary的数据存储类似,只是buckets有个更多的职责,它
 
   key的哈希值与buckets的length取余后`hashResult%bucketsLength=bucketIndex`,余数作为buckets的索引就能找到我们要的数据所存储的块,当出现两个key指向同一个块时,即上图中的John Smith和Sandra Dee他同时指向152怎么办呢?存储节点Node具有Next属性执行下个Node,上图中,node 152的Next为154,即我们从152开始找Sandra Dee,发现不是我们想要的,再到154找,即可取到所需数据.
 
-## Node
+## 数据结构
+
+### Node
 
 ConcurrentDictionary中的每个数据存储在一个Node中,它除了存储value信息,还存储key信息,以及key对应的hashcode
 
@@ -57,7 +59,7 @@ private class Node
         }
 ```
 
-## Table
+### Table
 
 而整个ConcurrentDictionary的数据存储在这样的一个Table中,其中m_buckets的Index负责映射key,m_locks是线程锁,下文中会有详细介绍,m_countPerLock存储每个lock锁负责的node数量.
 
@@ -131,7 +133,15 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
 
 ```
 
-## Add
+## 方法属性
+
+### 基本属性
+
+``` C#
+
+```
+
+### Add
 
 向Table中添加元素有以下亮点值得我们关注.
 
@@ -302,7 +312,7 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
 
 ```
 
-## Get
+### Get
 
 从Table中获取元素的的流程与前文介绍ConsurrentDictionary工作原理时一致,但有以下亮点值得关注.
 
@@ -340,7 +350,7 @@ ConcurrentDictionary会在构造函数中创建Table,这里我对原有的构造
 
 ```
 
-## Grow table
+### Grow table
 
 当table中任何一个m_countPerLock的数量超过了设定的阈值后,会触发此操作对Table进行扩容.
 
