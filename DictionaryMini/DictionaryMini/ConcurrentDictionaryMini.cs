@@ -27,7 +27,7 @@ namespace DictionaryMini
         {
             internal readonly Node[] m_buckets;   //上文中提到的buckets
             internal readonly object[] m_locks;   //线程锁
-            internal volatile int[] m_countPerLock;  //索格锁所管理的数据数量
+            internal volatile int[] m_countPerLock;  //每个锁所管理的数据数量
             internal readonly IEqualityComparer<TKey> m_comparer;  //当前key对应的type的比较器
 
             //构造函数
@@ -338,8 +338,7 @@ namespace DictionaryMini
             }
         }
 
-        private void GetBucketAndLockNo(
-            int hashcode, out int bucketNo, out int lockNo, int bucketCount, int lockCount)
+        private void GetBucketAndLockNo(int hashcode, out int bucketNo, out int lockNo, int bucketCount, int lockCount)
         {
             //0x7FFFFFFF 是long int的最大值 与它按位与数据小于等于这个最大值
             bucketNo = (hashcode & 0x7fffffff) % bucketCount;
