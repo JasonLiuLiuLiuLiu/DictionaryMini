@@ -10,11 +10,11 @@
 # Consurrent
 
 ConsurrentDictionary是Dictionary的线程安全版本,位于System.Collections.Concurrent的命名空间下,该命名空间下除了有ConsurrentDictionary,还有以下Class都是我们常用的那些类库的线程安全版本.  
-| Class | function |  
-|--|--|  
-| [BlockingCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.blockingcollection-1?view=netframework-4.7.2) | 为实现 [IProducerConsumerCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.iproducerconsumercollection-1?view=netframework-4.7.2) 的线程安全集合提供阻塞和限制功能。|  
-|[ConcurrentBag<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentbag-1?view=netframework-4.7.2)|表示对象的线程安全的无序集合。|  
-|[ConcurrentQueue<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentqueue-1?view=netframework-4.7.2)|表示线程安全的先进先出 (FIFO) 集合。|  
+| Class | function |
+|--|--|
+| [BlockingCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.blockingcollection-1?view=netframework-4.7.2) | 为实现 [IProducerConsumerCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.iproducerconsumercollection-1?view=netframework-4.7.2) 的线程安全集合提供阻塞和限制功能。|
+|[ConcurrentBag<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentbag-1?view=netframework-4.7.2)|表示对象的线程安全的无序集合。|
+|[ConcurrentQueue<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentqueue-1?view=netframework-4.7.2)|表示线程安全的先进先出 (FIFO) 集合。|
 
 如果读过我上一篇文章[你真的了解字典吗?](https://www.cnblogs.com/CoderAyu/p/10360608.html)的小伙伴,对这个`ConsurrentDictionary`的工作原理应该也不难理解,它是简简单单地在读写方法加个`lock`吗?  
 
@@ -202,7 +202,7 @@ ConcurrentDictionary中较为基础重点的方法分别位Add,Get,Remove,Grow T
 ```
 
 该方法依据CLI规范进行编写,简单来说,32位的计算机,对32字节以下的数据类型写入时可以一次写入的而不需要移动内存指针,64位计算机对64位以下的数据可一次性写入,不需要移动内存指针.保证了写入的安全.
-详见12.6.6 http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf
+详见12.6.6 <http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf>
 
 ``` C#
 
@@ -349,7 +349,7 @@ ConcurrentDictionary中较为基础重点的方法分别位Add,Get,Remove,Grow T
 
 ### Remove
 
-Remove方法实现其实也并不复杂,类似我们链表操作中移除某个Node.移除节点的同时,还要对前后节点进行连接,相信这边小伙伴们肯定很好理解.
+Remove方法实现其实也并不复杂,类似我们链表操作中移除某个Node.移除节点的同时,还要对前后节点进行链接,相信一块小伙伴们肯定很好理解.
 
 ``` C#
  private bool TryRemoveInternal(TKey key, out TValue value, bool matchValue, TValue oldValue)
@@ -542,8 +542,8 @@ private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool 
 
 # 学习感悟
 
-* lock[]:在以往的线程安全上,我们对数据的保护往往是对数据的修改写入等地方加上lock,这个lock经常上整个上下文中唯一的,这样的设计下就可能会出现多个线程,写入的根本不是一块数据,却要等待前一个线程写入完成下一个线程才能继续操作.在ConcurrentDictionary中,通过哈希算法,找出key的准确lock,如果不同的key,使用的不是同一个lock,那么这多个线程的写入时互补影响的.  
+* `lock[]`:在以往的线程安全上,我们对数据的保护往往是对数据的修改写入等地方加上lock,这个lock经常上整个上下文中唯一的,这样的设计下就可能会出现多个线程,写入的根本不是一块数据,却要等待前一个线程写入完成下一个线程才能继续操作.在ConcurrentDictionary中,通过哈希算法,从数组`lock[]`中找出key的准确lock,如果不同的key,使用的不是同一个lock,那么这多个线程的写入时互不影响的.  
   
 * 写入要考虑线程安全,读取呢?不可否认,在大部分场景下,读取不必去考虑线程安全,但是在我们这样的链式读取中,需要自上而下地查找,是不是有种可能在查找个过程中,链路被修改了呢?所以ConcurrentDictionary中使用Volatile.Read来读取出数据,该方法从指定字段读取对象引用,在需要它的系统上，插入一个内存屏障，阻止处理器重新排序内存操作，如果在代码中此方法之后出现读取或写入，则处理器无法在此方法之前移动它。
 
-* 在ConcurrentDictionary的更新方法中,对数据进行更新时,会判断该数据是否可以原子写入,如果时可以原子写入的,那么就直接更新数据,如果不是,那么会创建一个新的node覆盖原有node,起初看到这里时候,我百思不得其解,不知道这么操作的目的,后面在jeo duffy的博客中[Thread-safety, torn reads, and the like](http://joeduffyblog.com/2006/02/07/threadsafety-torn-reads-and-the-like/)中找到了答案,这样操作时为了防止torn reads(撕裂读取),什么叫撕裂读取呢?通俗地说,就是有的数据类型写入时,要分多次写入,写一次,移动一次指针,那么就有可能写了一半,这个结果被另外一个线程读取走了.比如说我把 `刘振宇`三个字改成`周杰伦`的过程中,我先改把刘改成周了,正在我准备去把振改成杰的时候,另外一个线程过来读取结果了,读到的数据是`周振宇`,这显然是不对的.所以对这种,更安全的做法是先把`周杰伦`三个字写好在一张纸条上,然后直接替换掉`刘振宇`.更详细的在[CLI规范12.6.6](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf)有详细介绍.  
+* 在ConcurrentDictionary的更新方法中,对数据进行更新时,会判断该数据是否可以原子写入,如果时可以原子写入的,那么就直接更新数据,如果不是,那么会创建一个新的node覆盖原有node,起初看到这里时候,我百思不得其解,不知道这么操作的目的,后面在jeo duffy的博客中[Thread-safety, torn reads, and the like](http://joeduffyblog.com/2006/02/07/threadsafety-torn-reads-and-the-like/)中找到了答案,这样操作时为了防止torn reads(撕裂读取),什么叫撕裂读取呢?通俗地说,就是有的数据类型写入时,要分多次写入,写一次,移动一次指针,那么就有可能写了一半,这个结果被另外一个线程读取走了.比如说我把 `刘振宇`三个字改成`周杰伦`的过程中,我先改把刘改成周了,正在我准备去把振改成杰的时候,另外一个线程过来读取结果了,读到的数据是`周振宇`,这显然是不对的.所以对这种,更安全的做法是先把`周杰伦`三个字写好在一张纸条上,然后直接替换掉`刘振宇`.更多信息在[CLI规范12.6.6](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf)有详细介绍.  
