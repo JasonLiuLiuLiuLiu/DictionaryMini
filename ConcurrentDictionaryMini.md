@@ -7,16 +7,17 @@
 查阅相关资料后,发现字典.net中Dictionary本身时不支持线程安全的,如果要想使用支持线程安全的字典,那么我们就要使用ConcurrentDictionary了.
 在研究ConcurrentDictionary的源码后,我觉得在ConcurrentDictionary的线程安全的解决思路很有意思,其对线程安全的处理对对我们项目中的其他高并发场景也有一定的参考价值,在这里再次分享我的一些学习心得和体会,希望对大家有所帮助.  
 
-# Consurrent
+# Concurrent
 
-ConsurrentDictionary是Dictionary的线程安全版本,位于System.Collections.Concurrent的命名空间下,该命名空间下除了有ConsurrentDictionary,还有以下Class都是我们常用的那些类库的线程安全版本.  
-| Class | function |
-|--|--|
-| [BlockingCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.blockingcollection-1?view=netframework-4.7.2) | 为实现 [IProducerConsumerCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.iproducerconsumercollection-1?view=netframework-4.7.2) 的线程安全集合提供阻塞和限制功能。|
-|[ConcurrentBag<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentbag-1?view=netframework-4.7.2)|表示对象的线程安全的无序集合。|
-|[ConcurrentQueue<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentqueue-1?view=netframework-4.7.2)|表示线程安全的先进先出 (FIFO) 集合。|
+ConcurrentDictionary是Dictionary的线程安全版本,位于System.Collections.Concurrent的命名空间下,该命名空间下除了有ConcurrentDictionary,还有以下Class都是我们常用的那些类库的线程安全版本.  
 
-如果读过我上一篇文章[你真的了解字典吗?](https://www.cnblogs.com/CoderAyu/p/10360608.html)的小伙伴,对这个`ConsurrentDictionary`的工作原理应该也不难理解,它是简简单单地在读写方法加个`lock`吗?  
+[BlockingCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.blockingcollection-1?view=netframework-4.7.2):为实现 [IProducerConsumerCollection<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.iproducerconsumercollection-1?view=netframework-4.7.2) 的线程安全集合提供阻塞和限制功能。  
+
+[ConcurrentBag<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentbag-1?view=netframework-4.7.2):表示对象的线程安全的无序集合.  
+
+[ConcurrentQueue<T>](https://docs.microsoft.com/zh-cn/dotnet/api/system.collections.concurrent.concurrentqueue-1?view=netframework-4.7.2):表示线程安全的先进先出 (FIFO) 集合。  
+
+如果读过我上一篇文章[你真的了解字典吗?](https://www.cnblogs.com/CoderAyu/p/10360608.html)的小伙伴,对这个`ConcurrentDictionary`的工作原理应该也不难理解,它是简简单单地在读写方法加个`lock`吗?  
 
 # 工作原理
 
@@ -26,9 +27,9 @@ ConsurrentDictionary是Dictionary的线程安全版本,位于System.Collections.
 
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/hashtable1.svg?sanitize=true)
 
-## ConsurrentDictionary
+## ConcurrentDictionary
 
-ConsurrentDictionary的数据存储类似,只是buckets有个更多的职责,它除了有dictionary中的buckets的桥梁的作用外,负责了数据存储.
+ConcurrentDictionary的数据存储类似,只是buckets有个更多的职责,它除了有dictionary中的buckets的桥梁的作用外,负责了数据存储.
 
 ![Alt text](https://raw.githubusercontent.com/liuzhenyulive/DictionaryMini/master/Pic/ConsurrentDictionary.png?sanitize=true)
 
@@ -314,7 +315,7 @@ ConcurrentDictionary中较为基础重点的方法分别位Add,Get,Remove,Grow T
 
 ### Get
 
-从Table中获取元素的的流程与前文介绍ConsurrentDictionary工作原理时一致,但有以下亮点值得关注.
+从Table中获取元素的的流程与前文介绍ConcurrentDictionary工作原理时一致,但有以下亮点值得关注.
 
 * 读取bucket[i]在Volatile.Read()方法中进行,该方法会自动对读取出来的数据加锁,避免在读取的过程中,数据被其他线程remove了.
 * Volatile读取指定字段时，在读取的内存中插入一个内存屏障，阻止处理器重新排序内存操作，如果在代码中此方法之后出现读取或写入，则处理器无法在此方法之前移动它。
