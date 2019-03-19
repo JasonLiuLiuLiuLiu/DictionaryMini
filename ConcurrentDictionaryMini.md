@@ -1,4 +1,3 @@
-
 # 背景
 
 在上一篇文章[你真的了解字典吗?](https://www.cnblogs.com/CoderAyu/p/10360608.html)一文中我介绍了Hash Function和字典的工作的基本原理.  
@@ -550,7 +549,7 @@ private void GrowTable(Tables tables, IEqualityComparer<TKey> newComparer, bool 
   
 * 写入要考虑线程安全,读取呢?不可否认,在大部分场景下,读取不必去考虑线程安全,但是在我们这样的链式读取中,需要自上而下地查找,是不是有种可能在查找个过程中,链路被修改了呢?所以ConcurrentDictionary中使用Volatile.Read来读取出数据,该方法从指定字段读取对象引用,在需要它的系统上，插入一个内存屏障，阻止处理器重新排序内存操作，如果在代码中此方法之后出现读取或写入，则处理器无法在此方法之前移动它。
 
-* 在ConcurrentDictionary的更新方法中,对数据进行更新时,会判断该数据是否可以原子写入,如果时可以原子写入的,那么就直接更新数据,如果不是,那么会创建一个新的node覆盖原有node,起初看到这里时候,我百思不得其解,不知道这么操作的目的,后面在jeo duffy的博客中[Thread-safety, torn reads, and the like](http://joeduffyblog.com/2006/02/07/threadsafety-torn-reads-and-the-like/)中找到了答案,这样操作时为了防止torn reads(撕裂读取),什么叫撕裂读取呢?通俗地说,就是有的数据类型写入时,要分多次写入,写一次,移动一次指针,那么就有可能写了一半,这个结果被另外一个线程读取走了.比如说我把 `刘振宇`三个字改成`周杰伦`的过程中,我先改把刘改成周了,正在我准备去把振改成杰的时候,另外一个线程过来读取结果了,读到的数据是`周振宇`,这显然是不对的.所以对这种,更安全的做法是先把`周杰伦`三个字写好在一张纸条上,然后直接替换掉`刘振宇`.更多信息在[CLI规范12.6.6](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf)有详细介绍.  
+* 在ConcurrentDictionary的更新方法中,对数据进行更新时,会判断该数据是否可以原子写入,如果时可以原子写入的,那么就直接更新数据,如果不是,那么会创建一个新的node覆盖原有node,起初看到这里时候,我百思不得其解,不知道这么操作的目的,后面在jeo duffy的博客中[Thread-safety, torn reads, and the like](http://joeduffyblog.com/2006/02/07/threadsafety-torn-reads-and-the-like/)中找到了答案,这样操作时为了防止torn reads(撕裂读取),什么叫撕裂读取呢?通俗地说,就是有的数据类型写入时,要分多次写入,写一次,移动一次指针,那么就有可能写了一半,这个结果被另外一个线程读取走了.比如说我把 `刘振宇`三个字改成`周杰伦`的过程中,我先把刘改成周了,正在我准备去把振改成杰的时候,另外一个线程过来读取结果了,读到的数据是`周振宇`,这显然是不对的.所以对这种,更安全的做法是先把`周杰伦`三个字写好在一张纸条上,然后直接替换掉`刘振宇`.更多信息在[CLI规范12.6.6](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-335.pdf)有详细介绍.  
 
 * `checked`和`unckecked`关键字.非常量的运算(non-constant)运算在编译阶段和运行时下不会做溢出检查,如下这样的代码时不会抛出异常的,算错了也不会报错。  
   
@@ -574,5 +573,5 @@ int a = int.MaxValue * 2;
 
 * `volatile`关键字,表示一个字段可能是由在同一时间执行多个线程进行修改。出于性能原因，编译器\运行时系统甚至硬件可以重新排列对存储器位置的读取和写入。声明的字段volatile不受这些优化的约束。添加volatile修饰符可确保所有线程都能按照执行顺序由任何其他线程执行的易失性写入,易失性写入是一件疯狂的事情的事情:[普通玩家慎用](https://stackoverflow.com/questions/72275/when-should-the-volatile-keyword-be-used-in-c).
 
-本博客锁涉及的代码都保存在github中,Take it easy to enjoy it!  
+本博客所涉及的代码都保存在github中,Take it easy to enjoy it!  
 <https://github.com/liuzhenyulive/DictionaryMini/blob/master/DictionaryMini/DictionaryMini/ConcurrentDictionaryMini.cs>
